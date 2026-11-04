@@ -1,9 +1,92 @@
 {
   "components": [
     {
+      "id": "comp-002",
       "tagCode": "INV-ELET-018",
-      "name": "Inversor Atualizado",
+      "name": "Inversor de Frequência Vetorial 7.5kW (400V)",
+      "category": "Automação",
+      "manufacturer": "Siemens Sinamics",
+      "model": "G120C - 6SL3210-1KE21-3AB0",
+      "application": "Painel Central de Automação CCM-01 - Controle de Velocidade da Correia Transportadora CT-03",
+      "description": "Inversor de frequência compacto com controle vetorial sensorless (SLVC) e comunicação Profinet / Modbus-RTU integrada. Possui função de segurança Safe Torque Off (STO SIL2 / PL d) certificada de fábrica, interface com operador (IOP-2) e chopper de frenagem dinâmico incorporado.",
+      "imageUrl": "/assets/images/inversor_frequencia_1793121480476.jpg",
+      "technicalDiagramUrl": "",
+      "diagramDescription": "Esquema de Bornes: Entradas digitais DI0 (Partida/Parada), DI1 (Sentido Reverso), DI2 (Reset Falha), DI4/DI5 (STO duplo canal). Saída analógica AO0 configurada para 4-20mA proporcional à rotação. Borne 9/28 (24Vcc auxiliar).",
+      "specs": [
+        {
+          "label": "Tensão de Alimentação",
+          "value": "380...480 Vca Trifásico (±10%)"
+        },
+        {
+          "label": "Potência Nominal",
+          "value": "7.5 kW / 10 CV"
+        },
+        {
+          "label": "Corrente Nominal Saída",
+          "value": "16.5 A"
+        },
+        {
+          "label": "Frequência de Saída",
+          "value": "0 a 550 Hz"
+        },
+        {
+          "label": "Grau de Proteção",
+          "value": "IP20 / UL Aberto"
+        },
+        {
+          "label": "Comunicação Industrial",
+          "value": "PROFINET / EtherNet/IP / Modbus"
+        },
+        {
+          "label": "Sobrecarga Admissível",
+          "value": "150% durante 3s / 110% durante 57s"
+        },
+        {
+          "label": "Temperatura Ambiente",
+          "value": "-10°C a +40°C (sem derating)"
+        }
+      ],
+      "maintenanceIntervalHours": 8000,
+      "maintenanceGuide": [
+        {
+          "step": 1,
+          "title": "Limpeza do Dissipador e Microventilador",
+          "instruction": "Aspirar poeira das aletas do dissipador térmico traseiro e testar rotação livre da ventoinha interna.",
+          "torqueOrMeasure": "Giro livre sem ruído"
+        },
+        {
+          "step": 2,
+          "title": "Reaperto dos Bornes de Potência (L1-L2-L3 / U-V-W)",
+          "instruction": "Utilizar chave dinamométrica nos parafusos de entrada de rede e saída para o motor elétrico.",
+          "torqueOrMeasure": "1.5 N·m conforme manual"
+        },
+        {
+          "step": 3,
+          "title": "Verificação da Tensão do Barramento CC (Link CC)",
+          "instruction": "Com multímetro True-RMS em escala DC, medir tensão entre bornes DCP e DCN com equipamento energizado em vazio.",
+          "torqueOrMeasure": "Aprox. 540Vcc a 580Vcc"
+        }
+      ],
+      "commonFailures": [
+        {
+          "symptom": "Código de Falha F07800 (Falta de Fase de Entrada)",
+          "probableCause": "Queda de uma das fases da rede trifásica de entrada ou disjuntor/fusível de alimentação aberto.",
+          "correctiveAction": "Medir tensão trifásica fase-fase (380V) nos bornes de entrada L1, L2, L3 do inversor."
+        },
+        {
+          "symptom": "Código de Falha F30001 (Sobrecorrente na Saída)",
+          "probableCause": "Curto-circuito ou fuga à terra no cabo do motor ou enrolamentos do estator danificados.",
+          "correctiveAction": "Desconectar cabos do motor nos bornes U-V-W e testar resistência de isolamento com megômetro."
+        }
+      ],
+      "manualFileName": "Manual_Operacao_Siemens_G120C_Parametrizacao.pdf",
+      "manualSummary": "Instruções de parametrização rápida, macros de ligação, tabela de códigos de alarme e diagnóstico via porta USB frontal.",
       "qrCodeData": "IFTA:INV-ELET-018",
+      "visibleToRoles": [
+        "CDI",
+        "ELETRICA"
+      ],
+      "createdAt": "2026-03-12T10:00:00Z",
       "updatedAt": "2026-11-04T09:43:00.605Z"
     },
     {

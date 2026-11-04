@@ -134,19 +134,21 @@ export const MachineCard: React.FC<MachineCardProps> = ({
 
           {/* Mini tags of items visible */}
           <div className="flex flex-wrap gap-1 mt-1">
-            {visibleLinked.slice(0, 3).map(link => {
+            {visibleLinked.slice(0, 3).map((link, idx) => {
+              if (!link || !link.componentId) return null;
+              const linkId = String(link.componentId).trim();
               const comp = allComponents.find(c => 
-                c.id === link.componentId || 
-                c.tagCode.toUpperCase() === link.componentId.toUpperCase() ||
-                c.id.toLowerCase() === link.componentId.toLowerCase()
+                (c.id && c.id === linkId) || 
+                (c.tagCode && c.tagCode.toUpperCase() === linkId.toUpperCase()) ||
+                (c.id && c.id.toLowerCase() === linkId.toLowerCase())
               );
               return (
                 <span
-                  key={link.componentId}
+                  key={link.componentId || idx}
                   className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono border border-slate-700/60 truncate max-w-[150px]"
-                  title={comp ? comp.name : link.componentId}
+                  title={comp ? comp.name : linkId}
                 >
-                  {comp ? comp.name.split(' ')[0] : 'Item'} ({comp ? comp.tagCode : link.componentId})
+                  {comp ? (comp.name || '').split(' ')[0] : 'Item'} ({comp ? comp.tagCode : linkId})
                 </span>
               );
             })}

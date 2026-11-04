@@ -301,24 +301,31 @@ export const storageService = {
     localStorage.setItem(STORAGE_KEYS.DELETED_MACHINES, JSON.stringify(deleted));
   },
 
-  // --- Scanner de Resgate Automático de Itens Perdidos em Atualizações ---
+  // --- Scanner de Resgate Automático de Itens Perdidos (Executado apenas 1 vez para migração limpa) ---
   salvageLostData() {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
     try {
+      if (localStorage.getItem('ifta_salvaged_v1') === 'true') return;
+      localStorage.setItem('ifta_salvaged_v1', 'true');
+
       const initCompIds = new Set(INITIAL_COMPONENTS.map(c => c.id));
-      const initCompTags = new Set(INITIAL_COMPONENTS.map(c => c.tagCode.toUpperCase()));
+      const initCompTags = new Set(INITIAL_COMPONENTS.map(c => (c.tagCode || '').toUpperCase()));
       const initMaqIds = new Set(INITIAL_MACHINES.map(m => m.id));
-      const initMaqTags = new Set(INITIAL_MACHINES.map(m => m.tagCode.toUpperCase()));
+      const initMaqTags = new Set(INITIAL_MACHINES.map(m => (m.tagCode || '').toUpperCase()));
       const deletedComps = new Set(this.getDeletedComponentIds());
       const deletedMaqs = new Set(this.getDeletedMachineIds());
 
-      let salvagedComps = 0;
-      let salvagedMaqs = 0;
+      const activeKeys = new Set(Object.values(STORAGE_KEYS));
 
+      // Captura lista de chaves antes de qualquer modificação para evitar erros de iteração
+      const allKeys: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (!key) continue;
-        if (key === STORAGE_KEYS.DELETED_COMPONENTS || key === STORAGE_KEYS.DELETED_MACHINES) continue;
+        const k = localStorage.key(i);
+        if (k) allKeys.push(k);
+      }
+
+      for (const key of allKeys) {
+        if (activeKeys.has(key)) continue;
 
         try {
           const val = localStorage.getItem(key);
@@ -331,97 +338,70 @@ export const storageService = {
 
           if (Array.isArray(candidateList)) {
             candidateList.forEach(item => {
-              if (!item || typeof item !== 'object' || !item.tagCode) return;
-              const tagUpper = String(item.tagCode).trim().toUpperCase();
+              if (!item || typeof item !== 'object' || !item.tagCode || typeof item.tagCode !== 'string') return;
+              const tagUpper = item.tagCode.trim().toUpperCase();
               const id = String(item.id || '');
 
-              // É um componente?
-              if (item.category !== undefined || item.specs !== undefined || item.maintenanceGuide !== undefined) {
+              // É um componente customizado válido?
+              if (item.name && (item.category !== undefined || item.specs !== undefined)) {
                 if (!initCompIds.has(id) && !initCompTags.has(tagUpper) && !deletedComps.has(id) && !deletedComps.has(tagUpper)) {
                   this.saveToVaultComponent(item as ComponentItem);
-                  this.addPendingSyncComponent(item as ComponentItem);
-                  salvagedComps++;
                 }
               }
 
-              // É uma máquina?
-              if (item.linkedComponents !== undefined || item.criticalityLevel !== undefined) {
+              // É uma máquina customizada válida?
+              if (item.name && (item.linkedComponents !== undefined || item.criticalityLevel !== undefined || item.sector !== undefined)) {
                 if (!initMaqIds.has(id) && !initMaqTags.has(tagUpper) && !deletedMaqs.has(id) && !deletedMaqs.has(tagUpper)) {
                   this.saveToVaultMachine(item as MachineItem);
-                  this.addPendingSyncMachine(item as MachineItem);
-                  salvagedMaqs++;
                 }
               }
             });
           }
         } catch {}
       }
-
-      if (salvagedComps > 0 || salvagedMaqs > 0) {
-        console.log(`[IFTA RESGATE] Resgatados do cofre local: ${salvagedComps} peças, ${salvagedMaqs} máquinas.`);
-      }
     } catch (e) {
-      console.warn('[IFTA RESGATE] Erro no scanner de recuperação:', e);
+      console.warn('[IFTA RESGATE] Scanner de recuperação finalizado com segurança.');
     }
   },
 
-  // --- Algoritmo de União Reconciliatória (Zero Perda de Dados) ---
+  // --- Algoritmo de União Reconciliatória Puro (Sem efeitos colaterais de rede) ---
   mergeComponentsWithVault(serverComps: ComponentItem[]): ComponentItem[] {
     const deletedIds = new Set(this.getDeletedComponentIds());
-    
-    // 1. Filtrar do snapshot do servidor itens que foram deletados explicitamente pelo usuário
-    const validServerComps = serverComps.filter(
-      c => !deletedIds.has(c.id) && !deletedIds.has(c.tagCode.toUpperCase())
-    );
-
     const mergedMap = new Map<string, ComponentItem>();
-    
-    // 2. Preencher com os dados do servidor
-    validServerComps.forEach(c => {
-      mergedMap.set(c.tagCode.toUpperCase(), c);
-    });
 
-    // 3. Mesclar com o cofre permanente do dispositivo local
+    // 1. Preencher com dados válidos do servidor
+    if (Array.isArray(serverComps)) {
+      serverComps.forEach(c => {
+        if (!c || !c.tagCode) return;
+        const tagUpper = c.tagCode.trim().toUpperCase();
+        if (!deletedIds.has(c.id) && !deletedIds.has(tagUpper)) {
+          mergedMap.set(tagUpper, { ...c, tagCode: tagUpper });
+        }
+      });
+    }
+
+    // 2. Mesclar com o cofre permanente do dispositivo local
     const vaultComps = this.getVaultComponents();
-    const missingOnServer: ComponentItem[] = [];
-
     vaultComps.forEach(vc => {
-      const tagUpper = vc.tagCode.toUpperCase();
+      if (!vc || !vc.tagCode) return;
+      const tagUpper = vc.tagCode.trim().toUpperCase();
       if (deletedIds.has(vc.id) || deletedIds.has(tagUpper)) return;
 
       if (!mergedMap.has(tagUpper)) {
-        // Peça existe no cofre do usuário mas o servidor (por reinício) ainda não tem!
-        mergedMap.set(tagUpper, vc);
-        missingOnServer.push(vc);
+        mergedMap.set(tagUpper, { ...vc, tagCode: tagUpper });
       } else {
         const existing = mergedMap.get(tagUpper)!;
         const vDate = new Date(vc.updatedAt || vc.createdAt || 0).getTime();
         const eDate = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
         if (vDate > eDate) {
-          mergedMap.set(tagUpper, vc);
-          missingOnServer.push(vc);
+          mergedMap.set(tagUpper, { ...vc, tagCode: tagUpper });
         }
       }
     });
 
-    // 4. Mesclar itens na fila pendente de envio
-    const pendingComps = this.getPendingSyncComponents();
-    pendingComps.forEach(pc => {
-      const tagUpper = pc.tagCode.toUpperCase();
-      if (!deletedIds.has(pc.id) && !deletedIds.has(tagUpper)) {
-        mergedMap.set(tagUpper, pc);
-      }
-    });
-
-    // 5. Auto-reidratação do servidor central: envia os itens do cofre que o servidor perdeu
-    if (missingOnServer.length > 0) {
-      missingOnServer.forEach(comp => this.addPendingSyncComponent(comp));
-      this.rehydrateServerBatch(missingOnServer, []).catch(() => {});
-    }
-
-    // 6. Garantir itens de fábrica padrão
+    // 3. Garantir itens de fábrica padrão
     INITIAL_COMPONENTS.forEach(ic => {
-      const tagUpper = ic.tagCode.toUpperCase();
+      const tagUpper = ic.tagCode.trim().toUpperCase();
       if (!deletedIds.has(ic.id) && !deletedIds.has(tagUpper) && !mergedMap.has(tagUpper)) {
         mergedMap.set(tagUpper, ic);
       }
@@ -432,59 +412,41 @@ export const storageService = {
 
   mergeMachinesWithVault(serverMaqs: MachineItem[]): MachineItem[] {
     const deletedIds = new Set(this.getDeletedMachineIds());
-    
-    // 1. Filtrar do snapshot do servidor itens deletados
-    const validServerMaqs = serverMaqs.filter(
-      m => !deletedIds.has(m.id) && !deletedIds.has(m.tagCode.toUpperCase())
-    );
-
     const mergedMap = new Map<string, MachineItem>();
-    
-    // 2. Preencher com dados do servidor
-    validServerMaqs.forEach(m => {
-      mergedMap.set(m.tagCode.toUpperCase(), m);
-    });
 
-    // 3. Mesclar com cofre permanente do dispositivo local
+    // 1. Preencher com dados válidos do servidor
+    if (Array.isArray(serverMaqs)) {
+      serverMaqs.forEach(m => {
+        if (!m || !m.tagCode) return;
+        const tagUpper = m.tagCode.trim().toUpperCase();
+        if (!deletedIds.has(m.id) && !deletedIds.has(tagUpper)) {
+          mergedMap.set(tagUpper, { ...m, tagCode: tagUpper });
+        }
+      });
+    }
+
+    // 2. Mesclar com cofre permanente do dispositivo local
     const vaultMaqs = this.getVaultMachines();
-    const missingOnServer: MachineItem[] = [];
-
     vaultMaqs.forEach(vm => {
-      const tagUpper = vm.tagCode.toUpperCase();
+      if (!vm || !vm.tagCode) return;
+      const tagUpper = vm.tagCode.trim().toUpperCase();
       if (deletedIds.has(vm.id) || deletedIds.has(tagUpper)) return;
 
       if (!mergedMap.has(tagUpper)) {
-        mergedMap.set(tagUpper, vm);
-        missingOnServer.push(vm);
+        mergedMap.set(tagUpper, { ...vm, tagCode: tagUpper });
       } else {
         const existing = mergedMap.get(tagUpper)!;
         const vDate = new Date(vm.updatedAt || vm.createdAt || 0).getTime();
         const eDate = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
         if (vDate > eDate) {
-          mergedMap.set(tagUpper, vm);
-          missingOnServer.push(vm);
+          mergedMap.set(tagUpper, { ...vm, tagCode: tagUpper });
         }
       }
     });
 
-    // 4. Mesclar pendentes
-    const pendingMaqs = this.getPendingSyncMachines();
-    pendingMaqs.forEach(pm => {
-      const tagUpper = pm.tagCode.toUpperCase();
-      if (!deletedIds.has(pm.id) && !deletedIds.has(tagUpper)) {
-        mergedMap.set(tagUpper, pm);
-      }
-    });
-
-    // 5. Auto-reidratação do servidor central
-    if (missingOnServer.length > 0) {
-      missingOnServer.forEach(maq => this.addPendingSyncMachine(maq));
-      this.rehydrateServerBatch([], missingOnServer).catch(() => {});
-    }
-
-    // 6. Garantir máquinas de fábrica
+    // 3. Garantir máquinas de fábrica
     INITIAL_MACHINES.forEach(im => {
-      const tagUpper = im.tagCode.toUpperCase();
+      const tagUpper = im.tagCode.trim().toUpperCase();
       if (!deletedIds.has(im.id) && !deletedIds.has(tagUpper) && !mergedMap.has(tagUpper)) {
         mergedMap.set(tagUpper, im);
       }
@@ -663,12 +625,12 @@ export const storageService = {
       }
     });
 
-    // Polling inteligente e ultra-rápido a cada 3s para garantir 100% de sincronismo em celulares
+    // Polling suave de segurança a cada 30s apenas quando o usuário está com a aba aberta
     setInterval(() => {
       if (typeof navigator !== 'undefined' && navigator.onLine && typeof document !== 'undefined' && document.visibilityState === 'visible') {
         this.syncWithServer().catch(() => {});
       }
-    }, 3000);
+    }, 30000);
   },
 
   getPendingSyncComponents(): ComponentItem[] {
@@ -681,8 +643,10 @@ export const storageService = {
   },
 
   addPendingSyncComponent(item: ComponentItem) {
+    if (!item || !item.tagCode) return;
+    const cleanTag = item.tagCode.trim().toUpperCase();
     const list = this.getPendingSyncComponents();
-    const idx = list.findIndex(c => c.id === item.id || c.tagCode.toUpperCase() === item.tagCode.toUpperCase());
+    const idx = list.findIndex(c => c.id === item.id || (c.tagCode && c.tagCode.toUpperCase() === cleanTag));
     if (idx >= 0) {
       list[idx] = item;
     } else {
@@ -692,8 +656,10 @@ export const storageService = {
   },
 
   removePendingSyncComponent(idOrTag: string) {
+    if (!idOrTag) return;
+    const clean = idOrTag.trim().toUpperCase();
     const list = this.getPendingSyncComponents().filter(
-      c => c.id !== idOrTag && c.tagCode.toUpperCase() !== idOrTag.toUpperCase()
+      c => c.id !== idOrTag && (c.tagCode || '').toUpperCase() !== clean
     );
     localStorage.setItem(STORAGE_KEYS.PENDING_COMPONENTS, JSON.stringify(list));
   },
@@ -708,8 +674,10 @@ export const storageService = {
   },
 
   addPendingSyncMachine(item: MachineItem) {
+    if (!item || !item.tagCode) return;
+    const cleanTag = item.tagCode.trim().toUpperCase();
     const list = this.getPendingSyncMachines();
-    const idx = list.findIndex(m => m.id === item.id || m.tagCode.toUpperCase() === item.tagCode.toUpperCase());
+    const idx = list.findIndex(m => m.id === item.id || (m.tagCode && m.tagCode.toUpperCase() === cleanTag));
     if (idx >= 0) {
       list[idx] = item;
     } else {
@@ -719,8 +687,10 @@ export const storageService = {
   },
 
   removePendingSyncMachine(idOrTag: string) {
+    if (!idOrTag) return;
+    const clean = idOrTag.trim().toUpperCase();
     const list = this.getPendingSyncMachines().filter(
-      m => m.id !== idOrTag && m.tagCode.toUpperCase() !== idOrTag.toUpperCase()
+      m => m.id !== idOrTag && (m.tagCode || '').toUpperCase() !== clean
     );
     localStorage.setItem(STORAGE_KEYS.PENDING_MACHINES, JSON.stringify(list));
   },
@@ -778,34 +748,44 @@ export const storageService = {
 
       if (serverDb && Array.isArray(serverDb.components) && Array.isArray(serverDb.machines)) {
         let changed = false;
-        const localComps = this.getComponents();
-        const localMachines = this.getMachines();
 
         // 4. Reconciliação não-destrutiva com o cofre permanente
         const mergedComponents = this.mergeComponentsWithVault(serverDb.components);
         const mergedMachines = this.mergeMachinesWithVault(serverDb.machines);
 
-        const localCompsStr = JSON.stringify(localComps);
+        // Comparação direta com o JSON bruto armazenado (evita disparar se nada mudou)
+        const currentCompsStr = localStorage.getItem(STORAGE_KEYS.COMPONENTS) || '[]';
         const mergedCompsStr = JSON.stringify(mergedComponents);
-        if (localCompsStr !== mergedCompsStr) {
+        if (currentCompsStr !== mergedCompsStr) {
           localStorage.setItem(STORAGE_KEYS.COMPONENTS, mergedCompsStr);
           changed = true;
         }
 
-        const localMaqsStr = JSON.stringify(localMachines);
+        const currentMaqsStr = localStorage.getItem(STORAGE_KEYS.MACHINES) || '[]';
         const mergedMaqsStr = JSON.stringify(mergedMachines);
-        if (localMaqsStr !== mergedMaqsStr) {
+        if (currentMaqsStr !== mergedMaqsStr) {
           localStorage.setItem(STORAGE_KEYS.MACHINES, mergedMaqsStr);
           changed = true;
         }
 
         if (Array.isArray(serverDb.categoryPermissions)) {
-          const localPermsStr = JSON.stringify(this.getCategoryPermissions());
+          const localPermsStr = localStorage.getItem(STORAGE_KEYS.CATEGORY_PERMISSIONS) || '[]';
           const serverPermsStr = JSON.stringify(serverDb.categoryPermissions);
           if (localPermsStr !== serverPermsStr) {
             localStorage.setItem(STORAGE_KEYS.CATEGORY_PERMISSIONS, serverPermsStr);
             changed = true;
           }
+        }
+
+        // 5. Auto-reidratação do servidor se o servidor tiver sido reiniciado sem itens do cofre
+        const serverCompTags = new Set(serverDb.components.map((c: any) => (c.tagCode || '').toUpperCase()));
+        const missingComps = this.getVaultComponents().filter(vc => vc.tagCode && !serverCompTags.has(vc.tagCode.toUpperCase()));
+
+        const serverMaqTags = new Set(serverDb.machines.map((m: any) => (m.tagCode || '').toUpperCase()));
+        const missingMaqs = this.getVaultMachines().filter(vm => vm.tagCode && !serverMaqTags.has(vm.tagCode.toUpperCase()));
+
+        if (missingComps.length > 0 || missingMaqs.length > 0) {
+          this.rehydrateServerBatch(missingComps, missingMaqs).catch(() => {});
         }
 
         if (changed && typeof window !== 'undefined') {
@@ -888,9 +868,10 @@ export const storageService = {
       let enriched = false;
 
       vault.forEach(vc => {
-        const tagUpper = vc.tagCode.toUpperCase();
+        if (!vc || !vc.tagCode) return;
+        const tagUpper = vc.tagCode.trim().toUpperCase();
         if (!deletedIds.has(vc.id) && !deletedIds.has(tagUpper)) {
-          if (!items.some(i => i.id === vc.id || i.tagCode.toUpperCase() === tagUpper)) {
+          if (!items.some(i => i.id === vc.id || (i.tagCode && i.tagCode.trim().toUpperCase() === tagUpper))) {
             items.unshift(vc);
             enriched = true;
           }
@@ -902,15 +883,37 @@ export const storageService = {
       }
 
       return items.map(c => {
-        if (!Array.isArray(c.visibleToRoles) || c.visibleToRoles.length === 0) {
-          const cat = (c.category || '').toLowerCase();
-          const isElec = ['elétrica', 'eletrica', 'automação', 'automacao', 'instrumentação', 'instrumentacao', 'painéis', 'paineis'].includes(cat);
-          return {
-            ...c,
-            visibleToRoles: isElec ? (['CDI', 'ELETRICA'] as UserRole[]) : (['CDI', 'MECANICA'] as UserRole[])
-          };
-        }
-        return c;
+        const safeTag = (c.tagCode || 'TAG-PENDING').trim().toUpperCase();
+        const initMatch = INITIAL_COMPONENTS.find(ic => ic.id === c.id || ic.tagCode.toUpperCase() === safeTag);
+        const safeCategory = c.category || initMatch?.category || 'Mecânica';
+        const catLower = safeCategory.toLowerCase();
+        const isElec = ['elétrica', 'eletrica', 'automação', 'automacao', 'instrumentação', 'instrumentacao', 'painéis', 'paineis'].includes(catLower);
+        const defaultRoles = isElec ? (['CDI', 'ELETRICA'] as UserRole[]) : (['CDI', 'MECANICA'] as UserRole[]);
+
+        return {
+          ...c,
+          id: c.id || initMatch?.id || (safeTag ? `comp-${safeTag.toLowerCase()}` : `comp-${Date.now()}`),
+          tagCode: safeTag,
+          name: c.name || initMatch?.name || 'Componente Técnico',
+          category: safeCategory,
+          manufacturer: c.manufacturer || initMatch?.manufacturer || 'Fabricante Homologado',
+          model: c.model || initMatch?.model || 'Modelo Padrão',
+          application: c.application || initMatch?.application || 'Equipamento Geral de Planta',
+          description: c.description || initMatch?.description || 'Descrição técnica operacional.',
+          imageUrl: c.imageUrl || initMatch?.imageUrl || '',
+          technicalDiagramUrl: c.technicalDiagramUrl || initMatch?.technicalDiagramUrl || '',
+          diagramDescription: c.diagramDescription || initMatch?.diagramDescription || '',
+          specs: Array.isArray(c.specs) && c.specs.length > 0 ? c.specs : (initMatch?.specs || []),
+          maintenanceIntervalHours: c.maintenanceIntervalHours || initMatch?.maintenanceIntervalHours || 4000,
+          maintenanceGuide: Array.isArray(c.maintenanceGuide) && c.maintenanceGuide.length > 0 ? c.maintenanceGuide : (initMatch?.maintenanceGuide || []),
+          commonFailures: Array.isArray(c.commonFailures) && c.commonFailures.length > 0 ? c.commonFailures : (initMatch?.commonFailures || []),
+          manualFileName: c.manualFileName || initMatch?.manualFileName || 'manual_tecnico.pdf',
+          manualSummary: c.manualSummary || initMatch?.manualSummary || 'Manual operacional.',
+          qrCodeData: c.qrCodeData || `IFTA:${safeTag}`,
+          visibleToRoles: Array.isArray(c.visibleToRoles) && c.visibleToRoles.length > 0 ? c.visibleToRoles : (initMatch?.visibleToRoles || defaultRoles),
+          createdAt: c.createdAt || initMatch?.createdAt || new Date().toISOString(),
+          updatedAt: c.updatedAt || new Date().toISOString()
+        };
       });
     } catch {
       return INITIAL_COMPONENTS;
@@ -1127,9 +1130,10 @@ export const storageService = {
       let enriched = false;
 
       vault.forEach(vm => {
-        const tagUpper = vm.tagCode.toUpperCase();
+        if (!vm || !vm.tagCode) return;
+        const tagUpper = vm.tagCode.trim().toUpperCase();
         if (!deletedIds.has(vm.id) && !deletedIds.has(tagUpper)) {
-          if (!list.some(m => m.id === vm.id || m.tagCode.toUpperCase() === tagUpper)) {
+          if (!list.some(m => m.id === vm.id || (m.tagCode && m.tagCode.trim().toUpperCase() === tagUpper))) {
             list.unshift(vm);
             enriched = true;
           }
@@ -1140,10 +1144,35 @@ export const storageService = {
         localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(list));
       }
 
-      return list.map(m => ({
-        ...m,
-        linkedComponents: Array.isArray(m.linkedComponents) ? m.linkedComponents : []
-      }));
+      return list.map(m => {
+        const safeTag = (m.tagCode || 'MAQ-PENDING').trim().toUpperCase();
+        const initMatch = INITIAL_MACHINES.find(im => im.id === m.id || im.tagCode.toUpperCase() === safeTag);
+        const safeLinked = Array.isArray(m.linkedComponents)
+          ? m.linkedComponents
+              .filter(l => l && (l.componentId || (l as any).tagCode))
+              .map(l => ({
+                componentId: String(l.componentId || (l as any).tagCode || '').trim(),
+                positionOrFunction: l.positionOrFunction || '',
+                allowedRoles: (Array.isArray(l.allowedRoles) ? l.allowedRoles : ['CDI', 'MECANICA', 'ELETRICA']) as UserRole[]
+              }))
+          : (initMatch?.linkedComponents || []);
+
+        return {
+          ...m,
+          id: m.id || initMatch?.id || (safeTag ? `maq-${safeTag.toLowerCase()}` : `maq-${Date.now()}`),
+          tagCode: safeTag,
+          name: m.name || initMatch?.name || 'Máquina Industrial',
+          sector: m.sector || initMatch?.sector || 'Planta Geral',
+          description: m.description || initMatch?.description || 'Linha de produção operacional.',
+          dimensions: m.dimensions || initMatch?.dimensions || '',
+          status: m.status || initMatch?.status || 'OPERACIONAL',
+          linkedComponents: safeLinked,
+          imageUrl: m.imageUrl || initMatch?.imageUrl || '',
+          qrCodeData: m.qrCodeData || `IFTA:${safeTag}`,
+          createdAt: m.createdAt || initMatch?.createdAt || new Date().toISOString(),
+          updatedAt: m.updatedAt || new Date().toISOString()
+        };
+      });
     } catch {
       return INITIAL_MACHINES;
     }

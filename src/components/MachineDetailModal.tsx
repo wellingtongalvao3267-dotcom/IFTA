@@ -276,17 +276,19 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
                 <span>Componentes Vinculados à Máquina</span>
               </h3>
               <span className="text-xs text-slate-400 font-mono">
-                Exibindo {visibleLinked.length} de {machine.linkedComponents.length} itens
+                Exibindo {visibleLinked.length} de {(machine.linkedComponents || []).length} itens
               </span>
             </div>
 
             {visibleLinked.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {visibleLinked.map((link) => {
+                {visibleLinked.map((link, idx) => {
+                  if (!link || !link.componentId) return null;
+                  const linkId = String(link.componentId).trim();
                   const comp = allComponents.find(c => 
-                    c.id === link.componentId || 
-                    c.tagCode.toUpperCase() === link.componentId.toUpperCase() ||
-                    c.id.toLowerCase() === link.componentId.toLowerCase()
+                    (c.id && c.id === linkId) || 
+                    (c.tagCode && c.tagCode.toUpperCase() === linkId.toUpperCase()) ||
+                    (c.id && c.id.toLowerCase() === linkId.toLowerCase())
                   );
                   if (!comp) return null;
 

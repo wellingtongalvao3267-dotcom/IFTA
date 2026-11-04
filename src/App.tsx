@@ -392,27 +392,29 @@ export default function App() {
   }
 
   // Categories list extracted from current available components
-  const availableCategories = Array.from(new Set(components.map(c => c.category))).filter(Boolean);
+  const availableCategories = Array.from(new Set(components.map(c => c?.category || 'Mecânica'))).filter(Boolean);
 
   // Filtering & Sorting
   const allAvailableComps = storageService.getComponents();
   const filteredMachines = machines.filter(m => {
-    const query = searchQuery.trim().toLowerCase();
+    if (!m) return false;
+    const query = (searchQuery || '').trim().toLowerCase();
     if (!query) return true;
 
     // Direct match on machine properties
     const directMatch = (
-      m.name.toLowerCase().includes(query) ||
-      m.tagCode.toLowerCase().includes(query) ||
-      m.sector.toLowerCase().includes(query) ||
-      m.description.toLowerCase().includes(query) ||
-      (m.dimensions && m.dimensions.toLowerCase().includes(query))
+      (m.name || '').toLowerCase().includes(query) ||
+      (m.tagCode || '').toLowerCase().includes(query) ||
+      (m.sector || '').toLowerCase().includes(query) ||
+      (m.description || '').toLowerCase().includes(query) ||
+      (m.dimensions ? m.dimensions.toLowerCase().includes(query) : false)
     );
     if (directMatch) return true;
 
     // Check linked components visible to this role
-    const links = m.linkedComponents || [];
+    const links = Array.isArray(m.linkedComponents) ? m.linkedComponents : [];
     return links.some(link => {
+      if (!link || !link.componentId) return false;
       const isAllowed = 
         currentUser.role === 'CDI' || 
         currentUser.role === 'DESENVOLVEDOR' ||
@@ -423,43 +425,57 @@ export default function App() {
       
       if (!isAllowed) return false;
 
+      const linkId = String(link.componentId).trim();
       const comp = allAvailableComps.find(c => 
-        c.id === link.componentId || 
-        c.tagCode.toUpperCase() === link.componentId.toUpperCase() ||
-        c.id.toLowerCase() === link.componentId.toLowerCase()
+        (c.id && c.id === linkId) || 
+        (c.tagCode && c.tagCode.toUpperCase() === linkId.toUpperCase()) ||
+        (c.id && c.id.toLowerCase() === linkId.toLowerCase())
       );
 
       if (!comp) return false;
 
       return (
-        comp.name.toLowerCase().includes(query) ||
-        comp.tagCode.toLowerCase().includes(query) ||
-        comp.category.toLowerCase().includes(query) ||
-        comp.manufacturer.toLowerCase().includes(query) ||
+        (comp.name || '').toLowerCase().includes(query) ||
+        (comp.tagCode || '').toLowerCase().includes(query) ||
+        (comp.category || '').toLowerCase().includes(query) ||
+        (comp.manufacturer || '').toLowerCase().includes(query) ||
         (link.positionOrFunction && link.positionOrFunction.toLowerCase().includes(query))
       );
     });
   });
 
   const filteredComponents = components.filter(comp => {
-    const query = searchQuery.trim().toLowerCase();
+    if (!comp) return false;
+    const query = (searchQuery || '').trim().toLowerCase();
+    const name = (comp.name || '').toLowerCase();
+    const tag = (comp.tagCode || '').toLowerCase();
+    const model = (comp.model || '').toLowerCase();
+    const mfg = (comp.manufacturer || '').toLowerCase();
+    const app = (comp.application || '').toLowerCase();
+    const cat = (comp.category || '').toLowerCase();
+
     const matchesSearch = !query || (
-      comp.name.toLowerCase().includes(query) ||
-      comp.tagCode.toLowerCase().includes(query) ||
-      comp.model.toLowerCase().includes(query) ||
-      comp.manufacturer.toLowerCase().includes(query) ||
-      comp.application.toLowerCase().includes(query) ||
-      comp.category.toLowerCase().includes(query) ||
-      (comp.specs && comp.specs.some(s => s.label.toLowerCase().includes(query) || s.value.toLowerCase().includes(query)))
+      name.includes(query) ||
+      tag.includes(query) ||
+      model.includes(query) ||
+      mfg.includes(query) ||
+      app.includes(query) ||
+      cat.includes(query) ||
+      (Array.isArray(comp.specs) && comp.specs.some(s => 
+        (s?.label || '').toLowerCase().includes(query) || 
+        (s?.value || '').toLowerCase().includes(query)
+      ))
     );
 
-    const matchesCategory = selectedCategory === 'TODAS' || comp.category.toLowerCase() === selectedCategory.toLowerCase();
+    const matchesCategory = selectedCategory === 'TODAS' || cat === (selectedCategory || '').toLowerCase();
 
     return matchesSearch && matchesCategory;
   }).sort((a, b) => {
-    if (sortBy === 'name') return a.name.localeCompare(b.name);
-    if (sortBy === 'tag') return a.tagCode.localeCompare(b.tagCode);
-    return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+    if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+    if (sortBy === 'tag') return (a.tagCode || '').localeCompare(b.tagCode || '');
+    const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime() || 0;
+    const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime() || 0;
+    return timeB - timeA;
   });
 
   const isCdi = currentUser.role === 'CDI' || currentUser.role === 'DESENVOLVEDOR';

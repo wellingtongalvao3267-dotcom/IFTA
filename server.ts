@@ -87,6 +87,72 @@ function evaluateDatabaseRichness(db: any): number {
   return (customComps * 10) + (customMaqs * 10) + db.components.length + db.machines.length;
 }
 
+function sanitizeComponent(raw: any): ComponentItem {
+  if (!raw) raw = {};
+  const tagUpper = (raw.tagCode || '').trim().toUpperCase();
+  const initMatch = INITIAL_COMPONENTS.find(ic => ic.id === raw.id || (tagUpper && ic.tagCode.toUpperCase() === tagUpper));
+
+  const safeCategory = raw.category || initMatch?.category || 'Mecânica';
+  const catLower = safeCategory.toLowerCase();
+  const isElec = ['elétrica', 'eletrica', 'automação', 'automacao', 'instrumentação', 'instrumentacao', 'painéis', 'paineis'].includes(catLower);
+  const defaultRoles = isElec ? (['CDI', 'ELETRICA'] as UserRole[]) : (['CDI', 'MECANICA'] as UserRole[]);
+
+  return {
+    id: raw.id || initMatch?.id || (tagUpper ? `comp-${tagUpper.toLowerCase()}` : `comp-${Date.now()}`),
+    tagCode: tagUpper || initMatch?.tagCode || 'TAG-PENDING',
+    name: raw.name || initMatch?.name || 'Componente Técnico',
+    category: safeCategory,
+    manufacturer: raw.manufacturer || initMatch?.manufacturer || 'Fabricante Homologado',
+    model: raw.model || initMatch?.model || 'Modelo Padrão',
+    application: raw.application || initMatch?.application || 'Equipamento Geral de Planta',
+    description: raw.description || initMatch?.description || 'Descrição técnica operacional cadastrada no sistema.',
+    imageUrl: raw.imageUrl || initMatch?.imageUrl || '',
+    technicalDiagramUrl: raw.technicalDiagramUrl || initMatch?.technicalDiagramUrl || '',
+    diagramDescription: raw.diagramDescription || initMatch?.diagramDescription || '',
+    specs: Array.isArray(raw.specs) && raw.specs.length > 0 ? raw.specs : (initMatch?.specs || []),
+    maintenanceIntervalHours: raw.maintenanceIntervalHours || initMatch?.maintenanceIntervalHours || 4000,
+    maintenanceGuide: Array.isArray(raw.maintenanceGuide) && raw.maintenanceGuide.length > 0 ? raw.maintenanceGuide : (initMatch?.maintenanceGuide || []),
+    commonFailures: Array.isArray(raw.commonFailures) && raw.commonFailures.length > 0 ? raw.commonFailures : (initMatch?.commonFailures || []),
+    manualFileName: raw.manualFileName || initMatch?.manualFileName || 'manual_tecnico.pdf',
+    manualSummary: raw.manualSummary || initMatch?.manualSummary || 'Manual operacional.',
+    qrCodeData: raw.qrCodeData || `IFTA:${tagUpper || 'COMP'}`,
+    visibleToRoles: Array.isArray(raw.visibleToRoles) && raw.visibleToRoles.length > 0 ? raw.visibleToRoles : (initMatch?.visibleToRoles || defaultRoles),
+    createdAt: raw.createdAt || initMatch?.createdAt || new Date().toISOString(),
+    updatedAt: raw.updatedAt || new Date().toISOString()
+  };
+}
+
+function sanitizeMachine(raw: any): MachineItem {
+  if (!raw) raw = {};
+  const tagUpper = (raw.tagCode || '').trim().toUpperCase();
+  const initMatch = INITIAL_MACHINES.find(im => im.id === raw.id || (tagUpper && im.tagCode.toUpperCase() === tagUpper));
+
+  const safeLinked = Array.isArray(raw.linkedComponents)
+    ? raw.linkedComponents
+        .filter((l: any) => l && (l.componentId || l.tagCode))
+        .map((l: any) => ({
+          componentId: String(l.componentId || l.tagCode || '').trim(),
+          positionOrFunction: l.positionOrFunction || '',
+          allowedRoles: Array.isArray(l.allowedRoles) ? l.allowedRoles : ['CDI', 'MECANICA', 'ELETRICA']
+        }))
+    : (initMatch?.linkedComponents || []);
+
+  return {
+    id: raw.id || initMatch?.id || (tagUpper ? `maq-${tagUpper.toLowerCase()}` : `maq-${Date.now()}`),
+    tagCode: tagUpper || initMatch?.tagCode || 'MAQ-PENDING',
+    name: raw.name || initMatch?.name || 'Máquina Industrial',
+    sector: raw.sector || initMatch?.sector || 'Planta Geral',
+    description: raw.description || initMatch?.description || 'Linha de produção operacional.',
+    dimensions: raw.dimensions || initMatch?.dimensions || '',
+    status: raw.status || initMatch?.status || 'OPERACIONAL',
+    linkedComponents: safeLinked,
+    imageUrl: raw.imageUrl || initMatch?.imageUrl || '',
+    qrCodeData: raw.qrCodeData || `IFTA:${tagUpper || 'MAQ'}`,
+    createdAt: raw.createdAt || initMatch?.createdAt || new Date().toISOString(),
+    updatedAt: raw.updatedAt || new Date().toISOString()
+  };
+}
+
 // Database loader with multi-location failover and rich data recovery
 function loadDatabase(): IftaDatabase {
   const candidates: IftaDatabase[] = [];
@@ -137,6 +203,16 @@ function loadDatabase(): IftaDatabase {
         needsSave = true;
       }
     });
+
+    // Sanitizar e normalizar integralmente todos os componentes
+    const prevCompsLen = bestDb.components.length;
+    bestDb.components = bestDb.components.map(sanitizeComponent);
+    if (bestDb.components.length !== prevCompsLen) needsSave = true;
+
+    // Sanitizar e normalizar integralmente todas as máquinas
+    const prevMaqsLen = bestDb.machines.length;
+    bestDb.machines = bestDb.machines.map(sanitizeMachine);
+    if (bestDb.machines.length !== prevMaqsLen) needsSave = true;
 
     // Validar contas de usuário e CDI
     if (Array.isArray(bestDb.users)) {
@@ -275,19 +351,14 @@ app.post('/api/data', (req, res) => {
 
   if (Array.isArray(components)) {
     if (replaceAll) {
-      currentDb.components = components;
+      currentDb.components = components.map(sanitizeComponent);
     } else {
       // Non-destructive upsert union: never erase other existing components
       components.forEach((incoming: ComponentItem) => {
         if (!incoming || !incoming.tagCode) return;
-        const normTag = incoming.tagCode.trim().toUpperCase();
-        const idx = currentDb.components.findIndex(c => c.id === incoming.id || c.tagCode.toUpperCase() === normTag);
-        const itemToSave: ComponentItem = {
-          ...incoming,
-          tagCode: normTag,
-          qrCodeData: `IFTA:${normTag}`,
-          updatedAt: incoming.updatedAt || now
-        };
+        const itemToSave = sanitizeComponent(incoming);
+        const normTag = itemToSave.tagCode;
+        const idx = currentDb.components.findIndex(c => c.id === itemToSave.id || c.tagCode.toUpperCase() === normTag);
         if (idx >= 0) {
           currentDb.components[idx] = { ...currentDb.components[idx], ...itemToSave };
         } else {
@@ -299,20 +370,14 @@ app.post('/api/data', (req, res) => {
 
   if (Array.isArray(machines)) {
     if (replaceAll) {
-      currentDb.machines = machines;
+      currentDb.machines = machines.map(sanitizeMachine);
     } else {
       // Non-destructive upsert union for machines
       machines.forEach((incoming: MachineItem) => {
         if (!incoming || !incoming.tagCode) return;
-        const normTag = incoming.tagCode.trim().toUpperCase();
-        const idx = currentDb.machines.findIndex(m => m.id === incoming.id || m.tagCode.toUpperCase() === normTag);
-        const itemToSave: MachineItem = {
-          ...incoming,
-          tagCode: normTag,
-          qrCodeData: `IFTA:${normTag}`,
-          linkedComponents: Array.isArray(incoming.linkedComponents) ? incoming.linkedComponents : [],
-          updatedAt: incoming.updatedAt || now
-        };
+        const itemToSave = sanitizeMachine(incoming);
+        const normTag = itemToSave.tagCode;
+        const idx = currentDb.machines.findIndex(m => m.id === itemToSave.id || m.tagCode.toUpperCase() === normTag);
         if (idx >= 0) {
           currentDb.machines[idx] = { ...currentDb.machines[idx], ...itemToSave };
         } else {
@@ -346,20 +411,14 @@ app.post('/api/data', (req, res) => {
 app.post('/api/sync-batch', (req, res) => {
   const { components, machines } = req.body;
   const currentDb = loadDatabase();
-  const now = new Date().toISOString();
   let addedCount = 0;
 
   if (Array.isArray(components)) {
     components.forEach((incoming: ComponentItem) => {
       if (!incoming || !incoming.tagCode) return;
-      const normTag = incoming.tagCode.trim().toUpperCase();
-      const idx = currentDb.components.findIndex(c => c.id === incoming.id || c.tagCode.toUpperCase() === normTag);
-      const itemToSave: ComponentItem = {
-        ...incoming,
-        tagCode: normTag,
-        qrCodeData: `IFTA:${normTag}`,
-        updatedAt: incoming.updatedAt || now
-      };
+      const itemToSave = sanitizeComponent(incoming);
+      const normTag = itemToSave.tagCode;
+      const idx = currentDb.components.findIndex(c => c.id === itemToSave.id || c.tagCode.toUpperCase() === normTag);
       if (idx >= 0) {
         currentDb.components[idx] = { ...currentDb.components[idx], ...itemToSave };
       } else {
@@ -372,15 +431,9 @@ app.post('/api/sync-batch', (req, res) => {
   if (Array.isArray(machines)) {
     machines.forEach((incoming: MachineItem) => {
       if (!incoming || !incoming.tagCode) return;
-      const normTag = incoming.tagCode.trim().toUpperCase();
-      const idx = currentDb.machines.findIndex(m => m.id === incoming.id || m.tagCode.toUpperCase() === normTag);
-      const itemToSave: MachineItem = {
-        ...incoming,
-        tagCode: normTag,
-        qrCodeData: `IFTA:${normTag}`,
-        linkedComponents: Array.isArray(incoming.linkedComponents) ? incoming.linkedComponents : [],
-        updatedAt: incoming.updatedAt || now
-      };
+      const itemToSave = sanitizeMachine(incoming);
+      const normTag = itemToSave.tagCode;
+      const idx = currentDb.machines.findIndex(m => m.id === itemToSave.id || m.tagCode.toUpperCase() === normTag);
       if (idx >= 0) {
         currentDb.machines[idx] = { ...currentDb.machines[idx], ...itemToSave };
       } else {
@@ -421,19 +474,13 @@ app.post('/api/components', (req, res) => {
     return res.status(400).json({ error: 'Peça inválida ou sem código Tag' });
   }
   const currentDb = loadDatabase();
-  const idx = currentDb.components.findIndex(c => c.id === comp.id || c.tagCode.toUpperCase() === comp.tagCode.toUpperCase());
-  const now = new Date().toISOString();
-  const normalizedComp = {
-    ...comp,
-    tagCode: comp.tagCode.trim().toUpperCase(),
-    qrCodeData: `IFTA:${comp.tagCode.trim().toUpperCase()}`,
-    updatedAt: now
-  };
+  const normalizedComp = sanitizeComponent(comp);
+  const idx = currentDb.components.findIndex(c => c.id === normalizedComp.id || c.tagCode.toUpperCase() === normalizedComp.tagCode.toUpperCase());
 
   if (idx >= 0) {
     currentDb.components[idx] = normalizedComp;
   } else {
-    currentDb.components.unshift({ ...normalizedComp, createdAt: normalizedComp.createdAt || now });
+    currentDb.components.unshift(normalizedComp);
   }
 
   saveDatabase(currentDb);
@@ -441,7 +488,7 @@ app.post('/api/components', (req, res) => {
     type: 'COMPONENT_SAVED',
     data: normalizedComp,
     message: `Peça "${normalizedComp.name}" (${normalizedComp.tagCode}) atualizada no catálogo.`,
-    timestamp: now
+    timestamp: normalizedComp.updatedAt || new Date().toISOString()
   });
   res.json({ success: true, component: normalizedComp });
 });
@@ -477,20 +524,13 @@ app.post('/api/machines', (req, res) => {
     return res.status(400).json({ error: 'Máquina inválida ou sem código Tag' });
   }
   const currentDb = loadDatabase();
-  const idx = currentDb.machines.findIndex(m => m.id === machine.id || m.tagCode.toUpperCase() === machine.tagCode.toUpperCase());
-  const now = new Date().toISOString();
-  const normalizedMachine = {
-    ...machine,
-    tagCode: machine.tagCode.trim().toUpperCase(),
-    qrCodeData: `IFTA:${machine.tagCode.trim().toUpperCase()}`,
-    linkedComponents: Array.isArray(machine.linkedComponents) ? machine.linkedComponents : [],
-    updatedAt: now
-  };
+  const normalizedMachine = sanitizeMachine(machine);
+  const idx = currentDb.machines.findIndex(m => m.id === normalizedMachine.id || m.tagCode.toUpperCase() === normalizedMachine.tagCode.toUpperCase());
 
   if (idx >= 0) {
     currentDb.machines[idx] = normalizedMachine;
   } else {
-    currentDb.machines.unshift({ ...normalizedMachine, createdAt: normalizedMachine.createdAt || now });
+    currentDb.machines.unshift(normalizedMachine);
   }
 
   saveDatabase(currentDb);
@@ -498,7 +538,7 @@ app.post('/api/machines', (req, res) => {
     type: 'MACHINE_SAVED',
     data: normalizedMachine,
     message: `Máquina "${normalizedMachine.name}" (${normalizedMachine.tagCode}) atualizada no catálogo.`,
-    timestamp: now
+    timestamp: normalizedMachine.updatedAt || new Date().toISOString()
   });
   res.json({ success: true, machine: normalizedMachine });
 });
