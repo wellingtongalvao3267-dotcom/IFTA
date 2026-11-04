@@ -13,6 +13,10 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'ifta_database.json');
 
+const BACKUP_FILE = path.join(DATA_DIR, 'ifta_database.backup.json');
+const TMP_BACKUP_FILE = '/tmp/ifta_database.vault.json';
+const PROJECT_BACKUP_FILE = path.join(process.cwd(), 'data', 'ifta_database_mirror.json');
+
 // Ensure data directory exists for persistent Docker storage
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -36,7 +40,7 @@ function getInitialDatabase(): IftaDatabase {
     categoryPermissions: INITIAL_CATEGORY_PERMISSIONS,
     users: INITIAL_USERS,
     logs: INITIAL_LOGS,
-    version: '2026.3',
+    version: '2026.4',
     lastUpdated: new Date().toISOString()
   };
 }
@@ -47,9 +51,24 @@ function saveDatabase(db: IftaDatabase): boolean {
   try {
     db.lastUpdated = new Date().toISOString();
     memoryDbCache = db;
+    const jsonStr = JSON.stringify(db, null, 2);
+
+    // 1. Gravação atômica no arquivo principal
     const tempFile = `${DATA_FILE}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
-    fs.writeFileSync(tempFile, JSON.stringify(db, null, 2), 'utf-8');
+    fs.writeFileSync(tempFile, jsonStr, 'utf-8');
     fs.renameSync(tempFile, DATA_FILE);
+
+    // 2. Gravação redundante de segurança em múltiplos locais para resistir a reciclagem de container
+    try {
+      fs.writeFileSync(BACKUP_FILE, jsonStr, 'utf-8');
+    } catch {}
+    try {
+      fs.writeFileSync(TMP_BACKUP_FILE, jsonStr, 'utf-8');
+    } catch {}
+    try {
+      fs.writeFileSync(PROJECT_BACKUP_FILE, jsonStr, 'utf-8');
+    } catch {}
+
     return true;
   } catch (err) {
     console.error('[DATABASE] Erro ao salvar arquivo persistente no Docker/disco:', err);
@@ -57,53 +76,93 @@ function saveDatabase(db: IftaDatabase): boolean {
   }
 }
 
-// Database representation for persistent JSON storage in Docker container
+// Helper to count custom (non-initial) items in a database candidate
+function evaluateDatabaseRichness(db: any): number {
+  if (!db || !Array.isArray(db.components) || !Array.isArray(db.machines)) return -1;
+  const initCompIds = new Set(INITIAL_COMPONENTS.map(c => c.id));
+  const initCompTags = new Set(INITIAL_COMPONENTS.map(c => c.tagCode.toUpperCase()));
+  const customComps = db.components.filter((c: any) => c && c.id && !initCompIds.has(c.id) && !initCompTags.has((c.tagCode || '').toUpperCase())).length;
+  const initMaqIds = new Set(INITIAL_MACHINES.map(m => m.id));
+  const customMaqs = db.machines.filter((m: any) => m && m.id && !initMaqIds.has(m.id)).length;
+  return (customComps * 10) + (customMaqs * 10) + db.components.length + db.machines.length;
+}
+
+// Database loader with multi-location failover and rich data recovery
 function loadDatabase(): IftaDatabase {
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-      const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.components) && Array.isArray(parsed.machines)) {
-        let needsSave = false;
-        if (parsed.machines.length === 0) {
-          parsed.machines = INITIAL_MACHINES;
-          needsSave = true;
+  const candidates: IftaDatabase[] = [];
+
+  const locations = [DATA_FILE, BACKUP_FILE, TMP_BACKUP_FILE, PROJECT_BACKUP_FILE];
+  for (const loc of locations) {
+    try {
+      if (fs.existsSync(loc)) {
+        const raw = fs.readFileSync(loc, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.components) && Array.isArray(parsed.machines)) {
+          candidates.push(parsed);
         }
-        INITIAL_COMPONENTS.forEach(ic => {
-          if (!parsed.components.some((c: any) => c.id === ic.id || c.tagCode === ic.tagCode)) {
-            parsed.components.push(ic);
-            needsSave = true;
-          }
-        });
-        if (Array.isArray(parsed.users)) {
-          parsed.users.forEach((u: any) => {
-            if (u.username === 'CDI' || u.role === 'CDI' || u.username === 'DESENVOLVEDOR' || u.role === 'DESENVOLVEDOR') {
-              u.username = 'CDI';
-              u.role = 'CDI';
-              if (u.passwordHash !== 'wlt@1616') {
-                u.passwordHash = 'wlt@1616';
-                needsSave = true;
-              }
-            }
-          });
-        }
-        // Restaurar segregação estrita de perfis: Mecânica apenas itens da mecânica, Elétrica apenas da elétrica, CDI enxerga tudo
-        parsed.categoryPermissions = INITIAL_CATEGORY_PERMISSIONS;
-        needsSave = true;
-        if (needsSave) {
-          saveDatabase(parsed);
-        }
-        memoryDbCache = parsed;
-        return parsed;
       }
-    }
-  } catch (err) {
-    console.error('[DATABASE] Erro ao carregar arquivo de dados:', err);
-    if (memoryDbCache) {
-      console.log('[DATABASE] Restaurando do cache de memória ativo.');
-      return memoryDbCache;
+    } catch {}
+  }
+
+  if (memoryDbCache && Array.isArray(memoryDbCache.components)) {
+    candidates.push(memoryDbCache);
+  }
+
+  let bestDb: IftaDatabase | null = null;
+  let bestScore = -1;
+
+  for (const candidate of candidates) {
+    const score = evaluateDatabaseRichness(candidate);
+    if (score > bestScore) {
+      bestScore = score;
+      bestDb = candidate;
     }
   }
+
+  if (bestDb) {
+    let needsSave = false;
+
+    // Garantir que todas as máquinas iniciais estejam presentes sem duplicar
+    INITIAL_MACHINES.forEach(im => {
+      if (!bestDb!.machines.some(m => m.id === im.id || m.tagCode.toUpperCase() === im.tagCode.toUpperCase())) {
+        bestDb!.machines.push(im);
+        needsSave = true;
+      }
+    });
+
+    // Garantir que todos os componentes iniciais estejam presentes sem duplicar
+    INITIAL_COMPONENTS.forEach(ic => {
+      if (!bestDb!.components.some(c => c.id === ic.id || c.tagCode.toUpperCase() === ic.tagCode.toUpperCase())) {
+        bestDb!.components.push(ic);
+        needsSave = true;
+      }
+    });
+
+    // Validar contas de usuário e CDI
+    if (Array.isArray(bestDb.users)) {
+      bestDb.users.forEach(u => {
+        if (u.username === 'CDI' || u.role === 'CDI' || u.username === 'DESENVOLVEDOR' || u.role === 'DESENVOLVEDOR') {
+          u.username = 'CDI';
+          u.role = 'CDI';
+          if (u.passwordHash !== 'wlt@1616') {
+            u.passwordHash = 'wlt@1616';
+            needsSave = true;
+          }
+        }
+      });
+    }
+
+    // Segregação estrita de permissões de categoria
+    bestDb.categoryPermissions = INITIAL_CATEGORY_PERMISSIONS;
+
+    if (needsSave || !fs.existsSync(DATA_FILE)) {
+      saveDatabase(bestDb);
+    }
+    memoryDbCache = bestDb;
+    return bestDb;
+  }
+
+  // Fallback se não existir nenhum arquivo salvo
   const initial = getInitialDatabase();
   saveDatabase(initial);
   memoryDbCache = initial;
@@ -210,10 +269,59 @@ app.get('/api/data', (req, res) => {
 });
 
 app.post('/api/data', (req, res) => {
-  const { components, machines, categoryPermissions, users, logs } = req.body;
+  const { components, machines, categoryPermissions, users, logs, replaceAll } = req.body;
   const currentDb = loadDatabase();
-  if (Array.isArray(components)) currentDb.components = components;
-  if (Array.isArray(machines)) currentDb.machines = machines;
+  const now = new Date().toISOString();
+
+  if (Array.isArray(components)) {
+    if (replaceAll) {
+      currentDb.components = components;
+    } else {
+      // Non-destructive upsert union: never erase other existing components
+      components.forEach((incoming: ComponentItem) => {
+        if (!incoming || !incoming.tagCode) return;
+        const normTag = incoming.tagCode.trim().toUpperCase();
+        const idx = currentDb.components.findIndex(c => c.id === incoming.id || c.tagCode.toUpperCase() === normTag);
+        const itemToSave: ComponentItem = {
+          ...incoming,
+          tagCode: normTag,
+          qrCodeData: `IFTA:${normTag}`,
+          updatedAt: incoming.updatedAt || now
+        };
+        if (idx >= 0) {
+          currentDb.components[idx] = { ...currentDb.components[idx], ...itemToSave };
+        } else {
+          currentDb.components.unshift(itemToSave);
+        }
+      });
+    }
+  }
+
+  if (Array.isArray(machines)) {
+    if (replaceAll) {
+      currentDb.machines = machines;
+    } else {
+      // Non-destructive upsert union for machines
+      machines.forEach((incoming: MachineItem) => {
+        if (!incoming || !incoming.tagCode) return;
+        const normTag = incoming.tagCode.trim().toUpperCase();
+        const idx = currentDb.machines.findIndex(m => m.id === incoming.id || m.tagCode.toUpperCase() === normTag);
+        const itemToSave: MachineItem = {
+          ...incoming,
+          tagCode: normTag,
+          qrCodeData: `IFTA:${normTag}`,
+          linkedComponents: Array.isArray(incoming.linkedComponents) ? incoming.linkedComponents : [],
+          updatedAt: incoming.updatedAt || now
+        };
+        if (idx >= 0) {
+          currentDb.machines[idx] = { ...currentDb.machines[idx], ...itemToSave };
+        } else {
+          currentDb.machines.unshift(itemToSave);
+        }
+      });
+    }
+  }
+
   if (Array.isArray(categoryPermissions)) currentDb.categoryPermissions = categoryPermissions;
   if (Array.isArray(users)) currentDb.users = users;
   if (Array.isArray(logs)) currentDb.logs = logs;
@@ -231,7 +339,79 @@ app.post('/api/data', (req, res) => {
     timestamp: currentDb.lastUpdated
   });
 
-  res.json({ success: true, lastUpdated: currentDb.lastUpdated });
+  res.json({ success: true, lastUpdated: currentDb.lastUpdated, componentsCount: currentDb.components.length, machinesCount: currentDb.machines.length });
+});
+
+// Dedicated batch sync endpoint to re-hydrate server from client vaults
+app.post('/api/sync-batch', (req, res) => {
+  const { components, machines } = req.body;
+  const currentDb = loadDatabase();
+  const now = new Date().toISOString();
+  let addedCount = 0;
+
+  if (Array.isArray(components)) {
+    components.forEach((incoming: ComponentItem) => {
+      if (!incoming || !incoming.tagCode) return;
+      const normTag = incoming.tagCode.trim().toUpperCase();
+      const idx = currentDb.components.findIndex(c => c.id === incoming.id || c.tagCode.toUpperCase() === normTag);
+      const itemToSave: ComponentItem = {
+        ...incoming,
+        tagCode: normTag,
+        qrCodeData: `IFTA:${normTag}`,
+        updatedAt: incoming.updatedAt || now
+      };
+      if (idx >= 0) {
+        currentDb.components[idx] = { ...currentDb.components[idx], ...itemToSave };
+      } else {
+        currentDb.components.unshift(itemToSave);
+        addedCount++;
+      }
+    });
+  }
+
+  if (Array.isArray(machines)) {
+    machines.forEach((incoming: MachineItem) => {
+      if (!incoming || !incoming.tagCode) return;
+      const normTag = incoming.tagCode.trim().toUpperCase();
+      const idx = currentDb.machines.findIndex(m => m.id === incoming.id || m.tagCode.toUpperCase() === normTag);
+      const itemToSave: MachineItem = {
+        ...incoming,
+        tagCode: normTag,
+        qrCodeData: `IFTA:${normTag}`,
+        linkedComponents: Array.isArray(incoming.linkedComponents) ? incoming.linkedComponents : [],
+        updatedAt: incoming.updatedAt || now
+      };
+      if (idx >= 0) {
+        currentDb.machines[idx] = { ...currentDb.machines[idx], ...itemToSave };
+      } else {
+        currentDb.machines.unshift(itemToSave);
+        addedCount++;
+      }
+    });
+  }
+
+  saveDatabase(currentDb);
+
+  if (addedCount > 0) {
+    broadcastRealtime({
+      type: 'DATABASE_UPDATED',
+      data: {
+        components: currentDb.components,
+        machines: currentDb.machines,
+        categoryPermissions: currentDb.categoryPermissions
+      },
+      message: `${addedCount} registro(s) reidratado(s) e sincronizado(s) no banco central.`,
+      timestamp: currentDb.lastUpdated
+    });
+  }
+
+  res.json({
+    success: true,
+    addedCount,
+    totalComponents: currentDb.components.length,
+    totalMachines: currentDb.machines.length,
+    lastUpdated: currentDb.lastUpdated
+  });
 });
 
 // Component item save / update

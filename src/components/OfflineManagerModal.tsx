@@ -43,6 +43,8 @@ export const OfflineManagerModal: React.FC<OfflineManagerModalProps> = ({
   const machines = storageService.getMachines();
   const users = storageService.getUsers();
   const logs = storageService.getLogs();
+  const vaultComponents = storageService.getVaultComponents();
+  const vaultMachines = storageService.getVaultMachines();
 
   const handleManualSync = async () => {
     setIsSyncing(true);
@@ -50,13 +52,28 @@ export const OfflineManagerModal: React.FC<OfflineManagerModalProps> = ({
     try {
       const res = await storageService.syncWithServer();
       if (res.success) {
-        setSyncFeedback('Sincronização concluída! Dados atualizados e salvos permanentemente no volume do Docker.');
+        setSyncFeedback('Sincronização concluída! Dados atualizados no banco central e protegidos no cofre local.');
         if (onDataRestored) onDataRestored();
       } else {
-        setSyncFeedback('Modo Offline: Servidor Docker inacessível no momento. Seus dados estão preservados no dispositivo.');
+        setSyncFeedback('Modo Offline: Servidor temporariamente inacessível. Seus dados estão 100% seguros no cofre deste aparelho.');
       }
     } catch {
-      setSyncFeedback('Servidor indisponível. Dados seguros no banco local.');
+      setSyncFeedback('Servidor indisponível. Dados seguros no cofre local.');
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncFeedback(null), 5000);
+    }
+  };
+
+  const handleForceVaultRehydrate = async () => {
+    setIsSyncing(true);
+    setSyncFeedback(null);
+    try {
+      await storageService.rehydrateServerBatch(components, machines);
+      setSyncFeedback('✅ Todos os itens do cofre foram reenviados e gravados com sucesso no banco de dados central!');
+      if (onDataRestored) onDataRestored();
+    } catch {
+      setSyncFeedback('Aviso: falha de rede ao reenviar. Itens continuam salvos no cofre local.');
     } finally {
       setIsSyncing(false);
       setTimeout(() => setSyncFeedback(null), 5000);
@@ -216,60 +233,76 @@ export const OfflineManagerModal: React.FC<OfflineManagerModalProps> = ({
             </div>
           )}
 
-          {/* Docker Server Persistence Card */}
+          {/* Docker Server & Local Vault Persistence Card */}
           <div className="p-4 rounded-xl bg-gradient-to-br from-slate-950 to-slate-900 border border-amber-500/30 shadow-lg space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400">
-                  <Database className="w-5 h-5" />
+                  <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                    Persistência Permanente no Docker
+                    Proteção Dupla de Dados (Central + Cofre Local)
                     <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono font-bold lowercase">
-                      volume ativo
+                      proteção ativa
                     </span>
                   </h4>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Arquivo: <span className="text-amber-300 font-mono">/app/data/ifta_database.json</span> (Volume: <span className="text-slate-300 font-mono">ifta_persistent_data</span>)
+                    Banco Central + Cofre Permanente do Dispositivo (Blindagem contra reinicializações)
                   </p>
                 </div>
               </div>
             </div>
 
             <p className="text-[11px] text-slate-300 leading-relaxed">
-              Todas as <strong>máquinas</strong> e <strong>peças</strong> cadastradas são salvas de forma <strong>permanente</strong> no volume do contêiner Docker e transmitidas <strong>instantaneamente em tempo real</strong> para todos os outros aparelhos conectados. Os dados permanecem preservados mesmo após reiniciar o sistema ou o Docker, até que um item seja explicitamente excluído.
+              Todas as <strong>máquinas</strong> e <strong>peças</strong> cadastradas são salvas com <strong>camada dupla de segurança</strong>: gravadas no banco de dados central compartilhado e espelhadas em um <strong>Cofre Permanente</strong> neste aparelho. Mesmo se o servidor for reiniciado, o seu aparelho restaura automaticamente os itens para o servidor e para todos os outros usuários.
             </p>
 
-            <button
-              type="button"
-              onClick={handleManualSync}
-              disabled={isSyncing}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 active:scale-98 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-60"
-            >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-amber-300' : 'text-amber-400'}`} />
-              <span>{isSyncing ? 'Sincronizando com Servidor...' : 'Sincronizar com Servidor / Docker Agora'}</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleManualSync}
+                disabled={isSyncing}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 active:scale-98 text-amber-400 border border-amber-500/30 hover:border-amber-500/60 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-60"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-amber-300' : 'text-amber-400'}`} />
+                <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar com Servidor'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleForceVaultRehydrate}
+                disabled={isSyncing}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-amber-500/10 hover:bg-amber-500/20 active:scale-98 text-amber-300 border border-amber-500/40 hover:border-amber-500 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-60"
+              >
+                <Upload className="w-4 h-4 text-amber-400" />
+                <span>Reenviar Cofre para o Banco</span>
+              </button>
+            </div>
           </div>
 
           {/* Statistics of cached data */}
           <div>
             <h4 className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-3 flex items-center gap-2">
               <HardDrive className="w-4 h-4 text-amber-400" />
-              <span>Dados Cadastrados e Preservados</span>
+              <span>Inventário Seguro no Dispositivo</span>
             </h4>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 font-mono text-xs">
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
-                <span className="text-slate-500 block text-[10px] uppercase">Peças / Componentes</span>
+                <span className="text-slate-500 block text-[10px] uppercase">Peças no Catálogo</span>
                 <span className="text-white text-lg font-bold">{components.length}</span>
-                <span className="text-[10px] text-emerald-400 block mt-0.5">Salvas Permanentemente</span>
+                <span className="text-[10px] text-emerald-400 block mt-0.5">
+                  {vaultComponents.length > 0 ? `${vaultComponents.length} no cofre local` : 'Protegidas no cofre'}
+                </span>
               </div>
 
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
-                <span className="text-slate-500 block text-[10px] uppercase">Máquinas Cadastradas</span>
+                <span className="text-slate-500 block text-[10px] uppercase">Máquinas no Catálogo</span>
                 <span className="text-white text-lg font-bold">{machines.length}</span>
-                <span className="text-[10px] text-emerald-400 block mt-0.5">Salvas Permanentemente</span>
+                <span className="text-[10px] text-emerald-400 block mt-0.5">
+                  {vaultMachines.length > 0 ? `${vaultMachines.length} no cofre local` : 'Protegidas no cofre'}
+                </span>
               </div>
 
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 col-span-2 sm:col-span-1">

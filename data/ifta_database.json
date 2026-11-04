@@ -1,6 +1,12 @@
 {
   "components": [
     {
+      "tagCode": "INV-ELET-018",
+      "name": "Inversor Atualizado",
+      "qrCodeData": "IFTA:INV-ELET-018",
+      "updatedAt": "2026-11-04T09:43:00.605Z"
+    },
+    {
       "id": "comp-001",
       "tagCode": "MOT-IND-042",
       "name": "Motor Elétrico Trifásico de Indução 7.5kW (10CV)",
@@ -98,95 +104,6 @@
       ],
       "createdAt": "2026-03-10T08:00:00Z",
       "updatedAt": "2026-10-27T09:12:00Z"
-    },
-    {
-      "id": "comp-002",
-      "tagCode": "INV-ELET-018",
-      "name": "Inversor de Frequência Vetorial 7.5kW (400V)",
-      "category": "Automação",
-      "manufacturer": "Siemens Sinamics",
-      "model": "G120C - 6SL3210-1KE21-3AB0",
-      "application": "Painel Central de Automação CCM-01 - Controle de Velocidade da Correia Transportadora CT-03",
-      "description": "Inversor de frequência compacto com controle vetorial sensorless (SLVC) e comunicação Profinet / Modbus-RTU integrada. Possui função de segurança Safe Torque Off (STO SIL2 / PL d) certificada de fábrica, interface com operador (IOP-2) e chopper de frenagem dinâmico incorporado.",
-      "imageUrl": "/assets/images/inversor_frequencia_1793121480476.jpg",
-      "technicalDiagramUrl": "",
-      "diagramDescription": "Esquema de Bornes: Entradas digitais DI0 (Partida/Parada), DI1 (Sentido Reverso), DI2 (Reset Falha), DI4/DI5 (STO duplo canal). Saída analógica AO0 configurada para 4-20mA proporcional à rotação. Borne 9/28 (24Vcc auxiliar).",
-      "specs": [
-        {
-          "label": "Tensão de Alimentação",
-          "value": "380...480 Vca Trifásico (±10%)"
-        },
-        {
-          "label": "Potência Nominal",
-          "value": "7.5 kW / 10 CV"
-        },
-        {
-          "label": "Corrente Nominal Saída",
-          "value": "16.5 A"
-        },
-        {
-          "label": "Frequência de Saída",
-          "value": "0 a 550 Hz"
-        },
-        {
-          "label": "Segurança Integrada",
-          "value": "Safe Torque Off (STO SIL 2)"
-        },
-        {
-          "label": "Protocolos de Rede",
-          "value": "PROFINET / EtherNet/IP"
-        },
-        {
-          "label": "Sobrecarga Admissível",
-          "value": "150% durante 60s a cada 300s"
-        },
-        {
-          "label": "Grau de Proteção",
-          "value": "IP20 (Montagem em armário)"
-        }
-      ],
-      "maintenanceIntervalHours": 8000,
-      "maintenanceGuide": [
-        {
-          "step": 1,
-          "title": "Limpeza de Poeira e Arrefecimento",
-          "instruction": "Aspirar o dissipador traseiro com soprador antiestático e aspirador industrial. Nunca usar ar comprimido úmido.",
-          "torqueOrMeasure": "Inspeção Semestral"
-        },
-        {
-          "step": 2,
-          "title": "Verificação do Cooler de Ventilação",
-          "instruction": "Conferir se o ventilador frontal gira suavemente sem travamento mecânico e sem ruído de bucha gasta.",
-          "torqueOrMeasure": "Vida útil ~40.000h"
-        },
-        {
-          "step": 3,
-          "title": "Reaperto dos Bornes de Potência (L1, L2, L3 / U, V, W)",
-          "instruction": "Conferir o torque com chave dinamométrica nos bornes de entrada e saída.",
-          "torqueOrMeasure": "1.5 N·m"
-        }
-      ],
-      "commonFailures": [
-        {
-          "symptom": "Falha F07801 (Sobrecorrente de Motor)",
-          "probableCause": "Rampa de aceleração excessivamente curta ou curto-circuito na fiação entre inversor e motor.",
-          "correctiveAction": "Aumentar parâmetro P1120 (tempo de aceleração) de 2.5s para 5.0s e conferir cabos blindados."
-        },
-        {
-          "symptom": "Alarme A07320 (Falha de Comunicação PROFINET)",
-          "probableCause": "Cabo RJ45 frouxo ou interferência eletromagnética por falta de aterramento da malha.",
-          "correctiveAction": "Verificar conector FastConnect, crimpagem e aterramento 360° da blindagem na chapa do painel."
-        }
-      ],
-      "manualFileName": "Manual_Operacao_Sinamics_G120C_Portugues.pdf",
-      "manualSummary": "Guia completo de parametrização básica, lista de alarmes e falhas, diagrama de controle e configuração de rede industrial.",
-      "qrCodeData": "IFTA:INV-ELET-018",
-      "visibleToRoles": [
-        "CDI",
-        "ELETRICA"
-      ],
-      "createdAt": "2026-03-12T10:00:00Z",
-      "updatedAt": "2026-10-27T08:45:00Z"
     },
     {
       "id": "comp-003",
@@ -1178,5 +1095,5 @@
     }
   ],
   "version": "2026.3",
-  "lastUpdated": "2026-11-03T23:32:37.360Z"
+  "lastUpdated": "2026-11-04T09:43:00.620Z"
 }
