@@ -1,0 +1,832 @@
+import { ComponentItem, UserAccount, CategoryAccessRule, MachineItem } from '../types';
+
+export const INITIAL_USERS: UserAccount[] = [
+  {
+    id: 'user-cdi-01',
+    username: 'CDI',
+    displayName: 'CDI (Centro de Documentação Industrial)',
+    role: 'CDI',
+    passwordHash: 'wlt@1616',
+    lastLogin: '2026-10-29 08:00:00',
+    allowedCategories: ['Elétrica', 'Mecânica', 'Pneumática', 'Automação', 'Hidráulica', 'Instrumentação', 'Painéis']
+  },
+  {
+    id: 'user-manut-01',
+    username: 'MECANICA',
+    displayName: 'Equipe Técnica Mecânica',
+    role: 'MECANICA',
+    passwordHash: 'bello2026',
+    lastLogin: '2026-10-27 08:30:00',
+    allowedCategories: ['Elétrica', 'Mecânica', 'Pneumática', 'Automação', 'Hidráulica', 'Instrumentação', 'Painéis']
+  },
+  {
+    id: 'user-elet-01',
+    username: 'ELETRICA',
+    displayName: 'Equipe Técnica Elétrica',
+    role: 'ELETRICA',
+    passwordHash: 'bello0099',
+    lastLogin: '2026-10-27 08:15:22',
+    allowedCategories: ['Elétrica', 'Mecânica', 'Pneumática', 'Automação', 'Hidráulica', 'Instrumentação', 'Painéis']
+  }
+];
+
+export const INITIAL_CATEGORIES = [
+  'Elétrica',
+  'Mecânica',
+  'Pneumática',
+  'Automação',
+  'Hidráulica',
+  'Instrumentação',
+  'Painéis'
+];
+
+export const INITIAL_CATEGORY_PERMISSIONS: CategoryAccessRule[] = [
+  {
+    category: 'Elétrica',
+    allowedRoles: ['CDI', 'ELETRICA']
+  },
+  {
+    category: 'Mecânica',
+    allowedRoles: ['CDI', 'MECANICA']
+  },
+  {
+    category: 'Pneumática',
+    allowedRoles: ['CDI', 'MECANICA']
+  },
+  {
+    category: 'Automação',
+    allowedRoles: ['CDI', 'ELETRICA']
+  },
+  {
+    category: 'Hidráulica',
+    allowedRoles: ['CDI', 'MECANICA']
+  },
+  {
+    category: 'Instrumentação',
+    allowedRoles: ['CDI', 'ELETRICA']
+  },
+  {
+    category: 'Painéis',
+    allowedRoles: ['CDI', 'ELETRICA']
+  }
+];
+
+export const INITIAL_COMPONENTS: ComponentItem[] = [
+  {
+    id: 'comp-001',
+    tagCode: 'MOT-IND-042',
+    name: 'Motor Elétrico Trifásico de Indução 7.5kW (10CV)',
+    category: 'Elétrica',
+    manufacturer: 'Siemens / Linha Simotics 1LE1',
+    model: '1LE1001-1DB23-4AA4',
+    application: 'Acionamento do Misturador Principal - Tanque de Formulação TQ-04',
+    description: 'Motor assíncrono de alto rendimento (IE3) com carcaça de ferro fundido, vedação W3 contra umidade e poeiras industriais, classe de isolamento F e elevação térmica classe B. Equipado com termistores PTC nos enrolamentos para proteção térmica contra sobrecarga contínua.',
+    imageUrl: '/assets/images/motor_trifasico_tecnico_1793121479568.jpg',
+    technicalDiagramUrl: '',
+    diagramDescription: 'Ligação Estrela-Triângulo: Terminais U1-V1-W1 / U2-V2-W2. Ligação Estrela (Y) para 380V (corrente nominal 15.2A) e Triângulo (Δ) para 220V (corrente nominal 26.3A). Sentido de rotação horário padrão visto da ponta do eixo.',
+    specs: [
+      { label: 'Potência Nominal', value: '7.5 kW / 10 CV' },
+      { label: 'Tensão de Operação', value: '220/380 V' },
+      { label: 'Frequência', value: '60 Hz' },
+      { label: 'Velocidade Síncrona', value: '1765 RPM' },
+      { label: 'Grau de Proteção', value: 'IP55 / NEMA 4' },
+      { label: 'Rendimento', value: '91.7% (IE3 Premium)' },
+      { label: 'Diâmetro do Eixo', value: '38 mm com chaveta 10x8 mm' },
+      { label: 'Torque Nominal', value: '40.6 N·m' },
+      { label: 'Fator de Serviço', value: '1.15' }
+    ],
+    maintenanceIntervalHours: 4000,
+    maintenanceGuide: [
+      {
+        step: 1,
+        title: 'Inspeção de Vibração e Ruído',
+        instruction: 'Utilizar analisador de vibração no mancal dianteiro e traseiro. Nível RMS máximo admissível: 2.8 mm/s.',
+        torqueOrMeasure: 'Max 2.8 mm/s RMS'
+      },
+      {
+        step: 2,
+        title: 'Verificação do Isolamento dos Enrolamentos',
+        instruction: 'Medição com megômetro (Megger) a 1000Vcc entre fases e carcaça aterrada com motor desenergizado.',
+        torqueOrMeasure: 'Mínimo > 100 MΩ'
+      },
+      {
+        step: 3,
+        title: 'Reengraxamento dos Rolamentos',
+        instruction: 'Aplicar graxa poliureia de alta temperatura (Mobil Polyrex EM) pela graxeira sem exceder a quantidade recomendada.',
+        torqueOrMeasure: '25g por mancal'
+      },
+      {
+        step: 4,
+        title: 'Reaperto dos Parafusos da Base e Pés',
+        instruction: 'Torquear os parafusos M12 de fixação da base à mesa de concreto ou estrutura metálica.',
+        torqueOrMeasure: '75 N·m ± 5%'
+      }
+    ],
+    commonFailures: [
+      {
+        symptom: 'Aquecimento excessivo da carcaça (>95°C)',
+        probableCause: 'Sobrecarga mecânica no eixo, desbalanceamento de tensão entre fases ou ventilação obstruída.',
+        correctiveAction: 'Verificar corrente por fase com alicate amperímetro; limpar tampa defletora e aletas de refrigeração.'
+      },
+      {
+        symptom: 'Desarme repentino do relé térmico / disjuntor',
+        probableCause: 'Falta de fase na rede, rotor travado ou curto-circuito interno.',
+        correctiveAction: 'Inspecionar fusíveis da cabine, testar continuidade e resistência ôhmica das 3 fases do estator.'
+      }
+    ],
+    manualFileName: 'Manual_Siemens_Simotics_1LE1_Instalacao.pdf',
+    manualSummary: 'Contém procedimentos de içamento, alinhamento a laser com acoplamento elástico, esquema da caixa de ligação e cronograma de lubrificação.',
+    qrCodeData: 'IFTA:MOT-IND-042',
+    visibleToRoles: ['CDI', 'ELETRICA'],
+    createdAt: '2026-03-10T08:00:00Z',
+    updatedAt: '2026-10-27T09:12:00Z'
+  },
+  {
+    id: 'comp-002',
+    tagCode: 'INV-ELET-018',
+    name: 'Inversor de Frequência Vetorial 7.5kW (400V)',
+    category: 'Automação',
+    manufacturer: 'Siemens Sinamics',
+    model: 'G120C - 6SL3210-1KE21-3AB0',
+    application: 'Painel Central de Automação CCM-01 - Controle de Velocidade da Correia Transportadora CT-03',
+    description: 'Inversor de frequência compacto com controle vetorial sensorless (SLVC) e comunicação Profinet / Modbus-RTU integrada. Possui função de segurança Safe Torque Off (STO SIL2 / PL d) certificada de fábrica, interface com operador (IOP-2) e chopper de frenagem dinâmico incorporado.',
+    imageUrl: '/assets/images/inversor_frequencia_1793121480476.jpg',
+    technicalDiagramUrl: '',
+    diagramDescription: 'Esquema de Bornes: Entradas digitais DI0 (Partida/Parada), DI1 (Sentido Reverso), DI2 (Reset Falha), DI4/DI5 (STO duplo canal). Saída analógica AO0 configurada para 4-20mA proporcional à rotação. Borne 9/28 (24Vcc auxiliar).',
+    specs: [
+      { label: 'Tensão de Alimentação', value: '380...480 Vca Trifásico (±10%)' },
+      { label: 'Potência Nominal', value: '7.5 kW / 10 CV' },
+      { label: 'Corrente Nominal Saída', value: '16.5 A' },
+      { label: 'Frequência de Saída', value: '0 a 550 Hz' },
+      { label: 'Segurança Integrada', value: 'Safe Torque Off (STO SIL 2)' },
+      { label: 'Protocolos de Rede', value: 'PROFINET / EtherNet/IP' },
+      { label: 'Sobrecarga Admissível', value: '150% durante 60s a cada 300s' },
+      { label: 'Grau de Proteção', value: 'IP20 (Montagem em armário)' }
+    ],
+    maintenanceIntervalHours: 8000,
+    maintenanceGuide: [
+      {
+        step: 1,
+        title: 'Limpeza de Poeira e Arrefecimento',
+        instruction: 'Aspirar o dissipador traseiro com soprador antiestático e aspirador industrial. Nunca usar ar comprimido úmido.',
+        torqueOrMeasure: 'Inspeção Semestral'
+      },
+      {
+        step: 2,
+        title: 'Verificação do Cooler de Ventilação',
+        instruction: 'Conferir se o ventilador frontal gira suavemente sem travamento mecânico e sem ruído de bucha gasta.',
+        torqueOrMeasure: 'Vida útil ~40.000h'
+      },
+      {
+        step: 3,
+        title: 'Reaperto dos Bornes de Potência (L1, L2, L3 / U, V, W)',
+        instruction: 'Conferir o torque com chave dinamométrica nos bornes de entrada e saída.',
+        torqueOrMeasure: '1.5 N·m'
+      }
+    ],
+    commonFailures: [
+      {
+        symptom: 'Falha F07801 (Sobrecorrente de Motor)',
+        probableCause: 'Rampa de aceleração excessivamente curta ou curto-circuito na fiação entre inversor e motor.',
+        correctiveAction: 'Aumentar parâmetro P1120 (tempo de aceleração) de 2.5s para 5.0s e conferir cabos blindados.'
+      },
+      {
+        symptom: 'Alarme A07320 (Falha de Comunicação PROFINET)',
+        probableCause: 'Cabo RJ45 frouxo ou interferência eletromagnética por falta de aterramento da malha.',
+        correctiveAction: 'Verificar conector FastConnect, crimpagem e aterramento 360° da blindagem na chapa do painel.'
+      }
+    ],
+    manualFileName: 'Manual_Operacao_Sinamics_G120C_Portugues.pdf',
+    manualSummary: 'Guia completo de parametrização básica, lista de alarmes e falhas, diagrama de controle e configuração de rede industrial.',
+    qrCodeData: 'IFTA:INV-ELET-018',
+    visibleToRoles: ['CDI', 'ELETRICA'],
+    createdAt: '2026-03-12T10:00:00Z',
+    updatedAt: '2026-10-27T08:45:00Z'
+  },
+  {
+    id: 'comp-003',
+    tagCode: 'VAL-PNEUM-105',
+    name: 'Bloco Manifold de Válvulas Solenoide 5/2 Vias',
+    category: 'Pneumática',
+    manufacturer: 'Festo / Linha VTUG',
+    model: 'VTUG-10-MSDR-B1T-25V20',
+    application: 'Atuadores Pneumáticos da Encartuchadora Automática - Máquina MK-02',
+    description: 'Ilha de válvulas pneumáticas compacta multipolo com 6 posições de válvulas 5/2 biestáveis e monoestáveis. Corpo em alumínio naval usinado com conexão multipolar Sub-D de 25 pinos para ligação direta aos módulos de saída digital do CLP. Opera com ar comprimido filtrado e lubrificado ou seco.',
+    imageUrl: '/assets/images/valvula_solenoide_1793121480685.jpg',
+    technicalDiagramUrl: '',
+    diagramDescription: 'Esquema Pneumático ISO 1219: Entrada principal de pressão Borne 1 (G 1/4"), Saídas de trabalho Bornes 2 e 4 (engates rápidos 6mm), Escapes silenciados Bornes 3 e 5. Acionamento elétrico 24Vcc com LED piloto individual.',
+    specs: [
+      { label: 'Pressão de Trabalho', value: '2.5 a 8.0 bar' },
+      { label: 'Vazão Nominal', value: '360 l/min por válvula' },
+      { label: 'Tensão das Bobinas', value: '24 Vcc (±10%)' },
+      { label: 'Potência por Bobina', value: '0.65 W (baixo consumo)' },
+      { label: 'Fluido', value: 'Ar comprimido norma ISO 8573-1:2010 [7:4:4]' },
+      { label: 'Tempo de Resposta', value: '12 ms acionamento / 15 ms retorno' },
+      { label: 'Conexão Pneumática', value: 'Engates rápidos instantâneos QS 6mm' },
+      { label: 'Faixa de Temperatura', value: '-5°C a +60°C' }
+    ],
+    maintenanceIntervalHours: 5000,
+    maintenanceGuide: [
+      {
+        step: 1,
+        title: 'Drenagem e Inspeção do Filtro Regulador',
+        instruction: 'Purgar condensado do copo do filtro F/R da entrada da máquina e verificar saturação do elemento poroso.',
+        torqueOrMeasure: 'Pressão ajustada: 6.0 bar'
+      },
+      {
+        step: 2,
+        title: 'Teste de Vedação e Fuga de Ar',
+        instruction: 'Aplicar detector de vazamentos (espuma líquida) nas conexões rápidas e vedações de flange das válvulas.',
+        torqueOrMeasure: 'Zero borbulhamento'
+      },
+      {
+        step: 3,
+        title: 'Substituição das Juntas de Vedação O-Ring',
+        instruction: 'Ao desmontar qualquer carretel, substituir o anel de vedação de borracha nitrílica (NBR) e lubrificar com graxa grafitada específica.',
+        torqueOrMeasure: 'Torque parafusos fixação: 0.8 N·m'
+      }
+    ],
+    commonFailures: [
+      {
+        symptom: 'Escape contínuo de ar pela saída 3 ou 5 em repouso',
+        probableCause: 'Partícula sólida retida na sede do carretel da válvula ou desgaste da borracha de vedação.',
+        correctiveAction: 'Desmontar o módulo da válvula na ilha, lavar com álcool isopropílico e inspecionar a vedação de retorno.'
+      },
+      {
+        symptom: 'Válvula não comuta mesmo com LED piloto aceso',
+        probableCause: 'Pressão de pilotagem insuficiente (<2.0 bar) ou carretel travado por oxidação/umidade excessiva na linha.',
+        correctiveAction: 'Verificar pressão manométrica da linha de entrada; acionar manualmente o pino de teste manual da bobina.'
+      }
+    ],
+    manualFileName: 'Catalogo_Tecnico_Festo_VTUG_Manifold.pdf',
+    manualSummary: 'Tabela de pinagem do conector Sub-D 25 polos, vistas explodidas para reposição de reparos e gráficos de vazão vs pressão diferencial.',
+    qrCodeData: 'IFTA:VAL-PNEUM-105',
+    visibleToRoles: ['CDI', 'MECANICA'],
+    createdAt: '2026-03-15T11:20:00Z',
+    updatedAt: '2026-10-27T08:50:00Z'
+  },
+  {
+    id: 'comp-004',
+    tagCode: 'SEN-IND-077',
+    name: 'Sensor de Proximidade Indutivo Cilíndrico M12',
+    category: 'Instrumentação',
+    manufacturer: 'Schneider Electric / Telemecanique',
+    model: 'OsiSense XS612B1PAL2',
+    application: 'Detecção de Fim de Curso do Pistão Elevador - Mesa Hidráulica MH-01',
+    description: 'Sensor indutivo para detecção de metais ferrosos sem contato físico. Corpo cilíndrico de latão niquelado com rosca métrica M12x1 e comprimento útil de 50mm. Saída a transistor PNP com função Normalmente Aberta (NA), proteção contra inversão de polaridade e curto-circuito.',
+    imageUrl: '/assets/images/sensor_indutivo_1793121479829.jpg',
+    technicalDiagramUrl: '',
+    diagramDescription: 'Esquema Elétrico de Ligação 3 Fios (Cabo 2m PVC): Marrom (+24Vcc / Borne 1), Azul (0Vcc / Borne 3), Preto (Sinal PNP / Borne 4 para entrada digital do CLP). LED âmbar integrado de 360° para visualização imediata do status de detecção.',
+    specs: [
+      { label: 'Distância Sensora (Sn)', value: '4.0 mm faceado' },
+      { label: 'Tensão de Alimentação', value: '12 a 48 Vcc' },
+      { label: 'Tipo de Saída', value: 'PNP - 3 Fios (Normalmente Aberto)' },
+      { label: 'Corrente de Carga Máxima', value: '200 mA' },
+      { label: 'Frequência de Comutação', value: '2500 Hz' },
+      { label: 'Grau de Proteção', value: 'IP68 / IP69K' },
+      { label: 'Material da Carcaça', value: 'Latão Niquelado / Face frontal PPS' },
+      { label: 'Temperatura de Operação', value: '-25°C a +70°C' }
+    ],
+    maintenanceIntervalHours: 6000,
+    maintenanceGuide: [
+      {
+        step: 1,
+        title: 'Verificação do Gap Mecânico de Leitura',
+        instruction: 'Medir com calibrador de folgas entre a face ativa do sensor e o came metálico de acionamento.',
+        torqueOrMeasure: 'Distância recomendada: 2.5 mm a 3.0 mm'
+      },
+      {
+        step: 2,
+        title: 'Aperto das Porcas de Fixação M12',
+        instruction: 'Apertar as porcas duplas contra a chapa de suporte evitando deformar o corpo do sensor.',
+        torqueOrMeasure: 'Torque máximo: 10 N·m'
+      },
+      {
+        step: 3,
+        title: 'Limpeza da Face Ativa Sensora',
+        instruction: 'Remover limalhas metálicas acumuladas por campo magnético residual utilizando pano limpo sem solvente agressivo.',
+        torqueOrMeasure: 'Inspeção Mensal'
+      }
+    ],
+    commonFailures: [
+      {
+        symptom: 'Sinal oscilando ou falsos disparos intermitentes',
+        probableCause: 'Folga mecânica excessiva no came móvel ou vibração que aproxima o sensor além do limite.',
+        correctiveAction: 'Reapertar o suporte mecânico e conferir se o alvo entra paralelo à face do sensor.'
+      },
+      {
+        symptom: 'LED do sensor não acende com alvo metálico em frente',
+        probableCause: 'Falta de alimentação de 24Vcc (fusível queimado) ou cabo rompido internamente por flexão contínua.',
+        correctiveAction: 'Medir tensão entre fio marrom e azul; inspecionar o chicote flexível de passagem na esteira porta-cabos.'
+      }
+    ],
+    manualFileName: 'Ficha_Tecnica_Telemecanique_XS612B1PAL2.pdf',
+    manualSummary: 'Curvas de atenuação para metais não-ferrosos (alumínio, latão, inox), dimensões de furação e raio de curvatura do cabo.',
+    qrCodeData: 'IFTA:SEN-IND-077',
+    visibleToRoles: ['CDI', 'ELETRICA'],
+    createdAt: '2026-03-18T14:00:00Z',
+    updatedAt: '2026-10-27T07:30:00Z'
+  },
+  {
+    id: 'comp-005',
+    tagCode: 'ROL-MEC-219',
+    name: 'Rolamento Autocompensador de Rolos com Furo Cônico',
+    category: 'Mecânica',
+    manufacturer: 'SKF do Brasil',
+    model: '22212 EK + Bucha H 312',
+    application: 'Eixo Mancal da Peneira Vibratória de Classificação - Unidade 01',
+    description: 'Rolamento autocompensador de duas carreiras de rolos esféricos simétricos, gaiola de aço prensado janela centrada e furo cônico (conicidade 1:12). Projetado especificamente para acomodar desalinhamentos dinâmicos severos e altas cargas radiais e de choque.',
+    imageUrl: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80',
+    technicalDiagramUrl: '',
+    diagramDescription: 'Esquema Mecânico de Montagem: Eixo liso Ø55mm com bucha de fixação H 312, arruela de trava MB 12 e porca de fixação KM 12. Folga radial interna residual deve ser aferida com cálibre de lâminas antes e após a montagem final.',
+    specs: [
+      { label: 'Diâmetro Interno (d)', value: '60 mm (furo cônico 1:12)' },
+      { label: 'Diâmetro do Eixo com Bucha', value: '55 mm' },
+      { label: 'Diâmetro Externo (D)', value: '110 mm' },
+      { label: 'Largura (B)', value: '28 mm' },
+      { label: 'Capacidade de Carga Dinâmica (C)', value: '159 kN' },
+      { label: 'Capacidade de Carga Estática (C0)', value: '166 kN' },
+      { label: 'Folga Radial Inicial', value: '0.040 a 0.055 mm (Classe Normal)' },
+      { label: 'Redução da Folga após Aperto', value: '0.025 a 0.030 mm' }
+    ],
+    maintenanceIntervalHours: 2500,
+    maintenanceGuide: [
+      {
+        step: 1,
+        title: 'Verificação da Temperatura do Mancal',
+        instruction: 'Medir com pirômetro infravermelho no ponto central da caixa de mancal SNL 512. Temperatura normal de trabalho: 60°C a 75°C.',
+        torqueOrMeasure: 'Alarme > 85°C'
+      },
+      {
+        step: 2,
+        title: 'Lubrificação Periódica com Graxa de Extrema Pressão',
+        instruction: 'Injetar graxa complexo de lítio com aditivos EP e bissulfeto de molibdênio (SKF LGEP 2) através da ranhura e orifícios no anel externo (recurso W33).',
+        torqueOrMeasure: '30g a cada 15 dias'
+      },
+      {
+        step: 3,
+        title: 'Travamento da Porca KM e Orelha da Arruela MB',
+        instruction: 'Certificar que ao menos uma orelha da arruela de trava esteja dobrada no rebaixo correspondente da porca de fixação.',
+        torqueOrMeasure: 'Inspeção Visual'
+      }
+    ],
+    commonFailures: [
+      {
+        symptom: 'Ruído de estalo e vibração metálica de baixa frequência',
+        probableCause: 'Fadiga na pista interna provocada por excesso de aperto da bucha (folga residual nula) gerando pré-carga destrutiva.',
+        correctiveAction: 'Desmontar mancal, inspecionar pistas quanto a descascamento e remontar respeitando o deslocamento axial da bucha.'
+      },
+      {
+        symptom: 'Vazamento de graxa escurecida pela vedação do mancal',
+        probableCause: 'Degradação térmica da graxa ou sobre-lubrificação com quebra dos anéis de vedação labirinto tipo V-Ring.',
+        correctiveAction: 'Limpar a caixa do mancal, renovar as borrachas de vedação e dosar o volume de graxa em 30% a 50% do espaço livre.'
+      }
+    ],
+    manualFileName: 'Manual_SKF_Montagem_Rolamentos_Autocompensadores.pdf',
+    manualSummary: 'Método do ângulo de aperto da porca, tabela de deslocamento axial e recomendações de lubrificação para vibração severa.',
+    qrCodeData: 'IFTA:ROL-MEC-219',
+    visibleToRoles: ['CDI', 'MECANICA'],
+    createdAt: '2026-03-20T09:00:00Z',
+    updatedAt: '2026-10-27T08:10:00Z'
+  },
+  {
+    id: 'comp-006',
+    tagCode: 'BOM-HID-031',
+    name: 'Bomba Hidráulica de Palhetas de Deslocamento Variável',
+    category: 'Hidráulica',
+    manufacturer: 'Parker Hannifin / Denison',
+    model: 'PV7-1X/16-20RE01MC0-16',
+    application: 'Unidade Hidráulica Principal - Prensagem de Peças Prensa PR-05',
+    description: 'Bomba de palhetas com controle mecânico de compensação de pressão. Mantém o deslocamento máximo até atingir a pressão regulada no parafuso compensador, reduzindo instantaneamente o fluxo quase a zero mantendo o sistema pressurizado com mínimo consumo de energia e dissipação térmica.',
+    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
+    technicalDiagramUrl: '',
+    diagramDescription: 'Esquema Hidráulico Simbologia ISO 1219: Linha de sucção com flange SAE 1.1/4" direto ao tanque, Linha de pressão SAE 3/4" conectada ao bloco manifold de alívio e segurança. Linha de dreno de carcaça (borbulhador) obrigatoriamente sem restrição.',
+    specs: [
+      { label: 'Deslocamento Volumétrico', value: '20 cm³/rotação' },
+      { label: 'Pressão Máxima de Operação', value: '160 bar' },
+      { label: 'Faixa de Ajuste do Compensador', value: '25 a 160 bar' },
+      { label: 'Vazão Teórica a 1800 RPM', value: '36 l/min' },
+      { label: 'Sentido de Rotação', value: 'Horário (visto do eixo)' },
+      { label: 'Faixa de Viscosidade do Óleo', value: '16 a 160 mm²/s (cSt)' },
+      { label: 'Fluido Recomendado', value: 'Óleo mineral ISO VG 46 ou VG 68' },
+      { label: 'Nível de Ruído', value: '< 65 dB(A)' }
+    ],
+    maintenanceIntervalHours: 4000,
+    maintenanceGuide: [
+      {
+        step: 1,
+        title: 'Verificação do Nível e Temperatura do Óleo',
+        instruction: 'Conferir no visor de nível do tanque. Temperatura do reservatório não deve exceder 55°C em operação contínua.',
+        torqueOrMeasure: 'Max 55°C'
+      },
+      {
+        step: 2,
+        title: 'Inspeção do Indicador de Colmatação do Filtro de Retorno',
+        instruction: 'Verificar o manovacuômetro do filtro de retorno. Zona amarela/vermelha exige troca imediata do elemento de microfibra de 10µm.',
+        torqueOrMeasure: 'Max 1.8 bar diferencial'
+      },
+      {
+        step: 3,
+        title: 'Conferência do Dreno da Carcaça',
+        instruction: 'Inspecionar a tubulação de dreno externo; pressão no retorno não pode ultrapassar 1.5 bar para evitar expulsão do retentor do eixo.',
+        torqueOrMeasure: 'Max 1.5 bar'
+      }
+    ],
+    commonFailures: [
+      {
+        symptom: 'Ruído de britamento / cavitação audível na carcaça da bomba',
+        probableCause: 'Filtro de sucção obstruído, entrada de ar pela conexão da flange ou nível de óleo baixo no reservatório.',
+        correctiveAction: 'Verificar vedação O-ring na sucção, desobstruir cesto de sucção e completar nível com óleo filtrado.'
+      },
+      {
+        symptom: 'Sistema não atinge a pressão de prensagem desejada',
+        probableCause: 'Parafuso do compensador desregulado ou desgaste das palhetas internas do rotor.',
+        correctiveAction: 'Ajustar parafuso do compensador com chave Allen e manômetro de teste instalado na linha de pressão.'
+      }
+    ],
+    manualFileName: 'Manual_Manutencao_Bomba_Palhetas_PV7.pdf',
+    manualSummary: 'Procedimento de sangria de ar na primeira partida, tabela de torques de montagem do kit de cartucho e curva de potência consumida.',
+    qrCodeData: 'IFTA:BOM-HID-031',
+    visibleToRoles: ['CDI', 'MECANICA'],
+    createdAt: '2026-03-22T10:15:00Z',
+    updatedAt: '2026-10-27T08:00:00Z'
+  },
+  {
+    id: 'comp-007',
+    tagCode: 'DISJ-EL-012',
+    name: 'Disjuntor-Motor Magnetotérmico Tripolar 10-16A',
+    category: 'Painéis',
+    manufacturer: 'Schneider Electric',
+    model: 'TeSys Deca - GV2ME20',
+    application: 'Painel Elétrico de Distribuição QGBT-02 - Proteção do Motor da Bomba de Água Gelada',
+    description: 'Disjuntor-motor projetado para controle e proteção de motores elétricos trifásicos contra sobrecargas e curtos-circuitos. Equipado com disparador bimetálico regulável para sobrecorrente térmica e disparador magnético instantâneo calibrado em 13x In.',
+    imageUrl: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80',
+    technicalDiagramUrl: '',
+    diagramDescription: 'Esquema de Ligação Tripolar: Entrada de rede pelos bornes 1/L1, 3/L2, 5/L3 e saída para o contator/motor pelos bornes 2/T1, 4/T2, 6/T3. Montagem rápida em trilho DIN 35mm. Contatos auxiliares frontais GVAE11 (1NA + 1NF) para sinalização de falha ao CLP.',
+    specs: [
+      { label: 'Faixa de Ajuste Térmico', value: '10 a 16 A regulável no disco frontal' },
+      { label: 'Corrente de Disparo Magnético', value: '223 A (instantâneo)' },
+      { label: 'Tensão Nominal de Isolação (Ui)', value: '690 Vca' },
+      { label: 'Capacidade de Interrupção (Icu)', value: '15 kA em 380/400Vca' },
+      { label: 'Número de Polos', value: '3 Polos Protegidos' },
+      { label: 'Tipo de Comando', value: 'Botões basculantes LIGA (I) / DESLIGA (O)' },
+      { label: 'Normas Atendidas', value: 'IEC 60947-2, IEC 60947-4-1' }
+    ],
+    maintenanceIntervalHours: 8000,
+    maintenanceGuide: [
+      {
+        step: 1,
+        title: 'Calibração do Disco de Ajuste de Corrente',
+        instruction: 'Conferir se o ponteiro de ajuste térmico está exatamente posicionado no valor da corrente nominal de placa do motor (In x FS).',
+        torqueOrMeasure: 'Conferir corrente de placa'
+      },
+      {
+        step: 2,
+        title: 'Teste Mecânico do Mecanismo de Disparo',
+        instruction: 'Pressionar com chave isolada o orifício de "TEST" na parte frontal do disjuntor para verificar desarme instantâneo dos botões.',
+        torqueOrMeasure: 'Teste Semestral'
+      },
+      {
+        step: 3,
+        title: 'Reaperto dos Parafusos Borne Parafuso Phillips PZ2',
+        instruction: 'Reapertar os 6 parafusos dos terminais de potência para evitar pontos quentes de resistência de contato.',
+        torqueOrMeasure: '1.7 N·m'
+      }
+    ],
+    commonFailures: [
+      {
+        symptom: 'Disjuntor desarma imediatamente após acionar a partida do motor',
+        probableCause: 'Curto-circuito franco entre fases na fiação de saída ou disco térmico regulado abaixo da corrente nominal.',
+        correctiveAction: 'Inspecionar a cablagem com ohmímetro, conferir se a bomba não está travada mecanicamente.'
+      },
+      {
+        symptom: 'Botão liga (I) não retém armado',
+        probableCause: 'Mecanismo mecânico interno danificado por corte sob curto-circuito severo anterior.',
+        correctiveAction: 'Substituir o disjuntor por uma nova unidade de mesmo código GV2ME20.'
+      }
+    ],
+    manualFileName: 'Catalogo_Schneider_TeSys_GV2_Instrucoes.pdf',
+    manualSummary: 'Gráficos de curvas tempo-corrente de disparo térmico e magnético, tabela de coordenação tipo 2 com contatores LC1D.',
+    qrCodeData: 'IFTA:DISJ-EL-012',
+    visibleToRoles: ['CDI', 'ELETRICA'],
+    createdAt: '2026-03-25T11:00:00Z',
+    updatedAt: '2026-10-27T07:15:00Z'
+  },
+  {
+    id: 'comp-008',
+    tagCode: 'MANC-MEC-104',
+    name: 'Mancal Bipartido de Ferro Fundido com Graxeira',
+    category: 'Mecânica',
+    manufacturer: 'SKF / Linha SNL',
+    model: 'SNL 512-610 + Retentor V-Ring',
+    application: 'Esteira Transportadora 01 - Eixos dos Tambores de Tração e Retorno',
+    description: 'Caixa de mancal bipartida em ferro fundido cinzento de alta rigidez estrutural com graxeira hidráulica tipo bico cônico integrada para lubrificação periódica. Projetada para rolamentos autocompensadores de rolos ou esferas montados sobre bucha de fixação com vedação labirinto resistente a pó abrasivo.',
+    imageUrl: 'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=800&q=80',
+    technicalDiagramUrl: '',
+    diagramDescription: 'Esquema de Montagem e Lubrificação: Fixação na base por 2 parafusos M16 classe 8.8 (torque 130 N·m). Graxeira M10x1 centralizada no topo da tampa. Espaço para relubrificação com capacidade de graxa inicial de 120g.',
+    specs: [
+      { label: 'Tipo de Mancal', value: 'Bipartido para rolamento com bucha' },
+      { label: 'Eixo Suportado', value: 'Ø 50 mm a Ø 60 mm' },
+      { label: 'Rolamento Compatível', value: 'SKF 22212 EK com Bucha H 312' },
+      { label: 'Graxeira de Lubrificação', value: 'Rosca M10x1 tipo botão reto' },
+      { label: 'Material da Caixa', value: 'Ferro fundido cinzento GG25' },
+      { label: 'Tipo de Vedação', value: 'Labirinto metálico e anel V-Ring' },
+      { label: 'Torque Parafusos da Tampa', value: '80 N·m (Parafusos M12)' },
+      { label: 'Carga Radial Máxima', value: '62 kN' }
+    ],
+    maintenanceIntervalHours: 2000,
+    maintenanceGuide: [
+      {
+        step: 1,
+        title: 'Higienização do Bico da Graxeira',
+        instruction: 'Limpar rigorosamente o bico da graxeira antes de acoplar a pistola de engraxamento para evitar introdução de sujeira no alojamento.',
+        torqueOrMeasure: 'Limpeza com pano seco'
+      },
+      {
+        step: 2,
+        title: 'Engraxamento Periódico',
+        instruction: 'Injetar graxa de lítio com bissulfeto de molibdênio lentamente enquanto o eixo estiver em rotação manual lenta.',
+        torqueOrMeasure: '20g a 25g de graxa'
+      },
+      {
+        step: 3,
+        title: 'Inspeção de Parafusos de Fixação da Base',
+        instruction: 'Reapertar os parafusos de sustentação da sapata do mancal contra as longarinas metálicas da esteira.',
+        torqueOrMeasure: '130 N·m'
+      }
+    ],
+    commonFailures: [
+      {
+        symptom: 'Excesso de aquecimento na caixa (>75°C)',
+        probableCause: 'Volume excessivo de graxa gerando atrito hidráulico interno ou desalinhamento angular do tambor.',
+        correctiveAction: 'Retirar o bujão inferior de alívio para drenar o excesso de graxa e alinhar a estrutura com laser.'
+      },
+      {
+        symptom: 'Vibração excessiva na carcaça do mancal',
+        probableCause: 'Desgaste da pista do rolamento interno ou folga de fixação na longarina.',
+        correctiveAction: 'Aferir a vibração com acelerômetro e inspecionar a folga radial interna.'
+      }
+    ],
+    manualFileName: 'Manual_SKF_Caixas_Mancal_SNL_500.pdf',
+    manualSummary: 'Dimensões nominais de montagem, códigos de peças sobressalentes, anéis de vedação e tipos de lubrificantes aprovados.',
+    qrCodeData: 'IFTA:MANC-MEC-104',
+    visibleToRoles: ['CDI', 'MECANICA'],
+    createdAt: '2026-03-26T09:00:00Z',
+    updatedAt: '2026-10-27T08:00:00Z'
+  },
+  {
+    id: 'comp-009',
+    tagCode: 'FITA-MEC-055',
+    name: 'Modelo de Fita de Transporte Modular Termoplástica',
+    category: 'Mecânica',
+    manufacturer: 'Habasit / Rexnord',
+    model: 'M5010 Flat Top 2" Pitch - Acetal Branco Sanitário',
+    application: 'Esteira Transportadora 01 - Plataforma de Transporte Contínuo de Embalagens',
+    description: 'Fita transportadora modular de esteira contínua montada em módulos plásticos de polioximetileno (POM / Acetal) de alta resistência ao desgaste e baixo coeficiente de atrito. Superfície plana fechada (Flat Top) com pinos de articulação em polipropileno de alta durabilidade e engrenagens dentadas bipartidas de tração positiva.',
+    imageUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80',
+    technicalDiagramUrl: '',
+    diagramDescription: 'Esquema de Montagem da Fita: Pinos de retenção travados sem cabeça nas extremidades. Sentido de avanço demarcado por setas nos elos modulares. Engrenagens tracionadas no eixo quadrado motriz de 40x40 mm.',
+    specs: [
+      { label: 'Passo da Fita (Pitch)', value: '50.8 mm (2 polegadas)' },
+      { label: 'Largura Útil Nominal', value: '650 mm montagem modular' },
+      { label: 'Material dos Módulos', value: 'Polioximetileno (POM / Acetal Branco)' },
+      { label: 'Material dos Pinos', value: 'PBT / Polipropileno virgem' },
+      { label: 'Resistência à Tração Admissível', value: '38.000 N/m de largura' },
+      { label: 'Faixa de Temperatura', value: '-40°C a +90°C' },
+      { label: 'Espessura Nominal da Fita', value: '16.0 mm' },
+      { label: 'Coeficiente de Atrito sobre Aço Inox', value: '0.18' }
+    ],
+    maintenanceIntervalHours: 1500,
+    maintenanceGuide: [
+      {
+        step: 1,
+        title: 'Verificação da Tensão e Caimento de Retorno (Catenária)',
+        instruction: 'Medir o caimento livre da fita na volta inferior de retorno entre os rolos de apoio. Deve apresentar flecha suave sem tracionamento forçado.',
+        torqueOrMeasure: 'Flecha recomendada: 50 a 75 mm'
+      },
+      {
+        step: 2,
+        title: 'Inspeção dos Pinos de Travamento',
+        instruction: 'Conferir se nenhum pino lateral de articulação deslizou para fora da lateral da fita contra a guia metálica da estrutura.',
+        torqueOrMeasure: 'Inspeção visual lateral'
+      },
+      {
+        step: 3,
+        title: 'Lavagem e Higienização Técnica',
+        instruction: 'Lavar com água pressurizada e detergente neutro industrial sem uso de ácidos fortes que degradem a estrutura do acetal.',
+        torqueOrMeasure: 'Pressão máxima da água: 5 bar'
+      }
+    ],
+    commonFailures: [
+      {
+        symptom: 'Fita patinando ou saltando dentes da engrenagem de tração',
+        probableCause: 'Alongamento dos elos por carga excessiva ou folga no esticador de retorno.',
+        correctiveAction: 'Remover uma fileira de elos (2 polegadas) para reduzir o comprimento e regular o fuso esticador.'
+      },
+      {
+        symptom: 'Módulos quebrados ou desgastados assimetricamente',
+        probableCause: 'Presença de corpos estranhos sob a esteira ou perfil de desgaste de UHMW danificado na base.',
+        correctiveAction: 'Substituir os módulos danificados sacando o pino lateral com punção e inspecionar os perfis deslizantes.'
+      }
+    ],
+    manualFileName: 'Manual_Instalacao_Esteiras_Modulares_Habasit.pdf',
+    manualSummary: 'Instruções para emenda de fita, cálculo de potência de tração e tabela de espaçamento de engrenagens sprockets.',
+    qrCodeData: 'IFTA:FITA-MEC-055',
+    visibleToRoles: ['CDI', 'MECANICA'],
+    createdAt: '2026-03-26T10:00:00Z',
+    updatedAt: '2026-10-27T08:05:00Z'
+  },
+  {
+    id: 'comp-010',
+    tagCode: 'ROLO-MEC-088',
+    name: 'Conjunto de Rolos de Carga e Retorno Emborrachados Ø89mm',
+    category: 'Mecânica',
+    manufacturer: 'Martin Sprocket / Linha Transmecânica',
+    model: 'RL-89-650-R-NBR (Revestimento Borracha 8mm)',
+    application: 'Esteira Transportadora 01 - Suporte Inferior e Intermediário da Esteira',
+    description: 'Conjunto de rolos cilíndricos em tubo de aço carbono Schedule 40 usinado com revestimento vulcanizado de borracha nitrílica (NBR) com dureza 65 Shore A para absorção de impactos e redução de ruído. Eixo de aço trefilado retificado com rolamentos rígidos de esferas 6204-2RS blindados e vedação por labirinto de nylon.',
+    imageUrl: 'https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=800&q=80',
+    technicalDiagramUrl: '',
+    diagramDescription: 'Esquema de Montagem nos Cavaletes: Encaixe do eixo fresado com rebaixo de 14mm para fixação por chavetas nas ranhuras das travessas da esteira. Balanceamento dinâmico classe ISO G6.3 para até 450 RPM.',
+    specs: [
+      { label: 'Diâmetro Externo Total', value: 'Ø 89 mm (incluindo emborrachamento)' },
+      { label: 'Comprimento da Face do Rolo', value: '650 mm' },
+      { label: 'Espessura do Revestimento de Borracha', value: '8.0 mm Vulcanizada a Quente' },
+      { label: 'Dureza da Borracha', value: '65 Shore A' },
+      { label: 'Rolamento Interno', value: '2x 6204-2RS (Lubrificação permanente)' },
+      { label: 'Diâmetro do Eixo', value: 'Ø 20 mm com pontas fresadas de 14 mm' },
+      { label: 'Capacidade de Carga por Rolo', value: '180 kg' },
+      { label: 'Excentricidade Máxima (Batimento)', value: '< 0.35 mm' }
+    ],
+    maintenanceIntervalHours: 3000,
+    maintenanceGuide: [
+      {
+        step: 1,
+        title: 'Verificação da Rotação Livre sem Travamento',
+        instruction: 'Girar manualmente cada rolo de apoio com a esteira parada para constatar ausência de atrito ou aspereza nos rolamentos.',
+        torqueOrMeasure: 'Giro suave e silencioso'
+      },
+      {
+        step: 2,
+        title: 'Medição do Desgaste da Borracha',
+        instruction: 'Aferir a espessura da camada de borracha na região central onde ocorre maior contato de carga.',
+        torqueOrMeasure: 'Espessura mínima: 3.0 mm'
+      },
+      {
+        step: 3,
+        title: 'Alinhamento dos Cavaletes de Suporte',
+        instruction: 'Verificar perpendicularidade dos rolos em relação à linha de centro da esteira para evitar desvio lateral de esteira.',
+        torqueOrMeasure: 'Alinhamento a 90° com esquadro'
+      }
+    ],
+    commonFailures: [
+      {
+        symptom: 'Rolo travado com desgaste em faceta plana na borracha',
+        probableCause: 'Entrada de água ou produto corrosivo lavando a graxa do rolamento ou travamento por sujeira sob o eixo.',
+        correctiveAction: 'Substituir o rolo travado imediatamente para não queimar a fita e conferir os anéis de vedação.'
+      },
+      {
+        symptom: 'Descolamento do revestimento emborrachado',
+        probableCause: 'Contaminação contínua por solventes químicos ou impacto excessivo de produtos em queda livre.',
+        correctiveAction: 'Trocar o rolo por modelo com revestimento em poliuretano de alta resistência mecânica.'
+      }
+    ],
+    manualFileName: 'Catalogo_Rolos_Transportadores_Industriais.pdf',
+    manualSummary: 'Tabela de seleção de rolos de carga, rolos guias e rolos de retorno com guias de diâmetro e peso admissível.',
+    qrCodeData: 'IFTA:ROLO-MEC-088',
+    visibleToRoles: ['CDI', 'MECANICA'],
+    createdAt: '2026-03-26T11:00:00Z',
+    updatedAt: '2026-10-27T08:10:00Z'
+  }
+];
+
+export const INITIAL_MACHINES: MachineItem[] = [
+  {
+    id: 'maq-001',
+    tagCode: 'MAQ-EST-01',
+    name: 'Esteira Transportadora 01',
+    sector: 'Linha de Embalagem 01 / Expedição',
+    description: 'Esteira transportadora horizontal automatizada para transporte contínuo, pesagem e encaminhamento de embalagens e caixas secundárias. Equipada com motoredutor trifásico de alto rendimento acionado por inversor vetorial, esteira modular sanitária com baixo coeficiente de atrito, rolos emborrachados balanceados, mancais com graxeira externa e sensores industriais para monitoramento de fluxo.',
+    dimensions: '12.500 mm (Comprimento) x 650 mm (Largura útil) x 900 mm (Altura operacional com niveladores reguláveis)',
+    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80',
+    qrCodeData: 'IFTA:MAQ-EST-01',
+    status: 'OPERACIONAL',
+    linkedComponents: [
+      {
+        componentId: 'comp-001',
+        allowedRoles: ['CDI', 'ELETRICA'],
+        positionOrFunction: 'Motoredutor Elétrico de Tração Principal (7.5 kW / 10 CV)'
+      },
+      {
+        componentId: 'comp-002',
+        allowedRoles: ['CDI', 'ELETRICA'],
+        positionOrFunction: 'Inversor de Frequência Sinamics G120C (Painel CCM-01 / Controle de Velocidade)'
+      },
+      {
+        componentId: 'comp-004',
+        allowedRoles: ['CDI', 'ELETRICA'],
+        positionOrFunction: 'Sensor de Proximidade Indutivo (Contagem de Peças e Fim de Curso)'
+      },
+      {
+        componentId: 'comp-005',
+        allowedRoles: ['CDI', 'MECANICA'],
+        positionOrFunction: 'Rolamentos Autocompensadores SKF 22212 (Tambor de Tração e Retorno)'
+      },
+      {
+        componentId: 'comp-008',
+        allowedRoles: ['CDI', 'MECANICA'],
+        positionOrFunction: 'Mancais Bipartidos com Graxeira SNL 512 (Apoio dos Eixos dos Tambores)'
+      },
+      {
+        componentId: 'comp-009',
+        allowedRoles: ['CDI', 'MECANICA'],
+        positionOrFunction: 'Modelo de Fita de Transporte Modular Flat Top 2" (Largura 650 mm)'
+      },
+      {
+        componentId: 'comp-010',
+        allowedRoles: ['CDI', 'MECANICA'],
+        positionOrFunction: 'Conjunto de Rolos de Carga e Retorno Emborrachados Ø89 mm'
+      }
+    ],
+    createdAt: '2026-03-26T12:00:00Z',
+    updatedAt: '2026-10-27T09:00:00Z'
+  },
+  {
+    id: 'maq-002',
+    tagCode: 'MAQ-ENC-02',
+    name: 'Encartuchadora Automática MK-02',
+    sector: 'Setor de Embalagem Secundária - Sala Limpa',
+    description: 'Máquina automática de encartuchamento contínuo com alimentação de cartuchos dobrados por ventosas de vácuo, introdução de frascos por esteira sincronizada e fechamento por cola quente (Hot Melt). Comanda atuadores pneumáticos e servomotores digitais com proteções de segurança integradas.',
+    dimensions: '4.800 mm (Comprimento) x 1.650 mm (Largura) x 2.100 mm (Altura)',
+    imageUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80',
+    qrCodeData: 'IFTA:MAQ-ENC-02',
+    status: 'OPERACIONAL',
+    linkedComponents: [
+      {
+        componentId: 'comp-003',
+        allowedRoles: ['CDI', 'MECANICA'],
+        positionOrFunction: 'Bloco Manifold de Válvulas Solenoide Festo VTUG (Atuadores Pneumáticos)'
+      },
+      {
+        componentId: 'comp-004',
+        allowedRoles: ['CDI', 'ELETRICA'],
+        positionOrFunction: 'Sensor Indutivo Telemecanique XS612 (Sincronismo de Alimentação)'
+      },
+      {
+        componentId: 'comp-007',
+        allowedRoles: ['CDI', 'ELETRICA'],
+        positionOrFunction: 'Disjuntor-Motor TeSys GV2ME20 (Proteção da Bomba de Vácuo do Alimentador)'
+      }
+    ],
+    createdAt: '2026-03-27T10:00:00Z',
+    updatedAt: '2026-10-27T09:15:00Z'
+  }
+];
+
+export const INITIAL_LOGS = [
+  {
+    id: 'log-001',
+    timestamp: '2026-10-27 08:15:22',
+    username: 'ELETRICA',
+    role: 'ELETRICA' as const,
+    action: 'Autenticação no Sistema',
+    details: 'Login efetuado com perfil ELETRICA com sucesso.',
+    clientDevice: 'Tablet Industrial Android (Área de Produção)'
+  },
+  {
+    id: 'log-002',
+    timestamp: '2026-10-27 08:18:04',
+    username: 'ELETRICA',
+    role: 'ELETRICA' as const,
+    action: 'Consulta de Peça: INV-ELET-018',
+    details: 'Abertura da ficha técnica e esquema de ligação de Inversor Sinamics G120C.',
+    clientDevice: 'Tablet Industrial Android (Área de Produção)'
+  },
+  {
+    id: 'log-003',
+    timestamp: '2026-10-27 08:30:00',
+    username: 'MECANICA',
+    role: 'MECANICA' as const,
+    action: 'Autenticação no Sistema',
+    details: 'Login efetuado com perfil MECANICA com sucesso.',
+    clientDevice: 'Workstation Oficina Mecânica (Chrome 128)'
+  },
+  {
+    id: 'log-004',
+    timestamp: '2026-10-27 08:32:15',
+    username: 'MECANICA',
+    role: 'MECANICA' as const,
+    action: 'Consulta de Peça: VAL-PNEUM-105',
+    details: 'Visualização de guia de manutenção e pressão de trabalho do Bloco Festo VTUG.',
+    clientDevice: 'Workstation Oficina Mecânica (Chrome 128)'
+  },
+  {
+    id: 'log-005',
+    timestamp: '2026-10-27 09:45:10',
+    username: 'CDI',
+    role: 'CDI' as const,
+    action: 'Autenticação Administrativa',
+    details: 'Login de Desenvolvedor autenticado com credenciais mestras.',
+    clientDevice: 'Console de Engenharia IFTA (Workstation Linux)'
+  }
+];

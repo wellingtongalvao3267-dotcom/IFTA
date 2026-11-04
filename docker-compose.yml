@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  ifta-sistema-manutencao:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ifta-sistema-manutencao
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DATA_DIR=/app/data
+    volumes:
+      # Volume persistente do Docker para salvar máquinas e peças permanentemente no disco
+      - ifta_persistent_data:/app/data
+
+volumes:
+  ifta_persistent_data:
+    name: ifta_persistent_data

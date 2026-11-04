@@ -1,0 +1,6 @@
+{
+  "name": "IFTA Informações Técnicas e Aplicação",
+  "description": "Banco de dados técnico industrial com manuais, diagramas, esquemas e especificações de componentes e peças mecânicas, elétricas e pneumáticas.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
