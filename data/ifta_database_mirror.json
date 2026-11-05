@@ -903,24 +903,23 @@
       "tagCode": "MAQ-AUDIT-01",
       "name": "Prensa Hidráulica Contínua",
       "sector": "Setor de Prensagem / Linha 03",
-      "dimensions": "4.200mm x 1.800mm x 3.100mm",
       "description": "Equipamento principal de prensagem com acionamento servo-assistido.",
+      "dimensions": "4.200mm x 1.800mm x 3.100mm",
       "status": "OPERACIONAL",
       "linkedComponents": [
         {
           "componentId": "comp-audit-1793537769",
+          "positionOrFunction": "Acionamento hidráulico",
           "allowedRoles": [
             "CDI",
             "MECANICA"
-          ],
-          "positionOrFunction": "Acionamento hidráulico"
+          ]
         }
       ],
-      "createdBy": "CDI",
-      "updatedBy": "CDI",
+      "imageUrl": "",
       "qrCodeData": "IFTA:MAQ-AUDIT-01",
-      "updatedAt": "2026-11-01T12:56:09.630Z",
-      "createdAt": "2026-11-01T12:56:09.630Z"
+      "createdAt": "2026-11-01T12:56:09.630Z",
+      "updatedAt": "2026-11-01T12:56:09.630Z"
     },
     {
       "id": "maq-001",
@@ -929,67 +928,67 @@
       "sector": "Linha de Embalagem 01 / Expedição",
       "description": "Esteira transportadora horizontal automatizada para transporte contínuo, pesagem e encaminhamento de embalagens e caixas secundárias. Equipada com motoredutor trifásico de alto rendimento acionado por inversor vetorial, esteira modular sanitária com baixo coeficiente de atrito, rolos emborrachados balanceados, mancais com graxeira externa e sensores industriais para monitoramento de fluxo.",
       "dimensions": "12.500 mm (Comprimento) x 650 mm (Largura útil) x 900 mm (Altura operacional com niveladores reguláveis)",
-      "imageUrl": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80",
-      "qrCodeData": "IFTA:MAQ-EST-01",
       "status": "OPERACIONAL",
       "linkedComponents": [
         {
           "componentId": "comp-001",
+          "positionOrFunction": "Motoredutor Elétrico de Tração Principal (7.5 kW / 10 CV)",
           "allowedRoles": [
             "CDI",
             "ELETRICA"
-          ],
-          "positionOrFunction": "Motoredutor Elétrico de Tração Principal (7.5 kW / 10 CV)"
+          ]
         },
         {
           "componentId": "comp-002",
+          "positionOrFunction": "Inversor de Frequência Sinamics G120C (Painel CCM-01 / Controle de Velocidade)",
           "allowedRoles": [
             "CDI",
             "ELETRICA"
-          ],
-          "positionOrFunction": "Inversor de Frequência Sinamics G120C (Painel CCM-01 / Controle de Velocidade)"
+          ]
         },
         {
           "componentId": "comp-004",
+          "positionOrFunction": "Sensor de Proximidade Indutivo (Contagem de Peças e Fim de Curso)",
           "allowedRoles": [
             "CDI",
             "ELETRICA"
-          ],
-          "positionOrFunction": "Sensor de Proximidade Indutivo (Contagem de Peças e Fim de Curso)"
+          ]
         },
         {
           "componentId": "comp-005",
+          "positionOrFunction": "Rolamentos Autocompensadores SKF 22212 (Tambor de Tração e Retorno)",
           "allowedRoles": [
             "CDI",
             "MECANICA"
-          ],
-          "positionOrFunction": "Rolamentos Autocompensadores SKF 22212 (Tambor de Tração e Retorno)"
+          ]
         },
         {
           "componentId": "comp-008",
+          "positionOrFunction": "Mancais Bipartidos com Graxeira SNL 512 (Apoio dos Eixos dos Tambores)",
           "allowedRoles": [
             "CDI",
             "MECANICA"
-          ],
-          "positionOrFunction": "Mancais Bipartidos com Graxeira SNL 512 (Apoio dos Eixos dos Tambores)"
+          ]
         },
         {
           "componentId": "comp-009",
+          "positionOrFunction": "Modelo de Fita de Transporte Modular Flat Top 2\" (Largura 650 mm)",
           "allowedRoles": [
             "CDI",
             "MECANICA"
-          ],
-          "positionOrFunction": "Modelo de Fita de Transporte Modular Flat Top 2\" (Largura 650 mm)"
+          ]
         },
         {
           "componentId": "comp-010",
+          "positionOrFunction": "Conjunto de Rolos de Carga e Retorno Emborrachados Ø89 mm",
           "allowedRoles": [
             "CDI",
             "MECANICA"
-          ],
-          "positionOrFunction": "Conjunto de Rolos de Carga e Retorno Emborrachados Ø89 mm"
+          ]
         }
       ],
+      "imageUrl": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80",
+      "qrCodeData": "IFTA:MAQ-EST-01",
       "createdAt": "2026-03-26T12:00:00Z",
       "updatedAt": "2026-10-27T09:00:00Z"
     },
@@ -1000,35 +999,35 @@
       "sector": "Setor de Embalagem Secundária - Sala Limpa",
       "description": "Máquina automática de encartuchamento contínuo com alimentação de cartuchos dobrados por ventosas de vácuo, introdução de frascos por esteira sincronizada e fechamento por cola quente (Hot Melt). Comanda atuadores pneumáticos e servomotores digitais com proteções de segurança integradas.",
       "dimensions": "4.800 mm (Comprimento) x 1.650 mm (Largura) x 2.100 mm (Altura)",
-      "imageUrl": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80",
-      "qrCodeData": "IFTA:MAQ-ENC-02",
       "status": "OPERACIONAL",
       "linkedComponents": [
         {
           "componentId": "comp-003",
+          "positionOrFunction": "Bloco Manifold de Válvulas Solenoide Festo VTUG (Atuadores Pneumáticos)",
           "allowedRoles": [
             "CDI",
             "MECANICA"
-          ],
-          "positionOrFunction": "Bloco Manifold de Válvulas Solenoide Festo VTUG (Atuadores Pneumáticos)"
+          ]
         },
         {
           "componentId": "comp-004",
+          "positionOrFunction": "Sensor Indutivo Telemecanique XS612 (Sincronismo de Alimentação)",
           "allowedRoles": [
             "CDI",
             "ELETRICA"
-          ],
-          "positionOrFunction": "Sensor Indutivo Telemecanique XS612 (Sincronismo de Alimentação)"
+          ]
         },
         {
           "componentId": "comp-007",
+          "positionOrFunction": "Disjuntor-Motor TeSys GV2ME20 (Proteção da Bomba de Vácuo do Alimentador)",
           "allowedRoles": [
             "CDI",
             "ELETRICA"
-          ],
-          "positionOrFunction": "Disjuntor-Motor TeSys GV2ME20 (Proteção da Bomba de Vácuo do Alimentador)"
+          ]
         }
       ],
+      "imageUrl": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80",
+      "qrCodeData": "IFTA:MAQ-ENC-02",
       "createdAt": "2026-03-27T10:00:00Z",
       "updatedAt": "2026-10-27T09:15:00Z"
     }
@@ -1178,5 +1177,5 @@
     }
   ],
   "version": "2026.3",
-  "lastUpdated": "2026-11-04T09:43:00.620Z"
+  "lastUpdated": "2026-11-05T00:37:58.974Z"
 }
