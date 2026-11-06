@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cog, Wrench, Zap, Shield, ChevronRight, QrCode, Layers, Ruler, MapPin } from 'lucide-react';
+import { Cog, Wrench, Zap, Shield, ChevronRight, QrCode, Layers, Ruler, MapPin, FileText } from 'lucide-react';
 import { MachineItem, ComponentItem, UserRole } from '../types';
 import { TechnicalItemImage } from './TechnicalItemImage';
 
@@ -63,6 +63,12 @@ export const MachineCard: React.FC<MachineCardProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
+            {machine.diagramPdfUrl && (
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center gap-1 shrink-0" title="Diagrama técnico em PDF disponível">
+                <FileText className="w-3 h-3 text-rose-400" />
+                <span>PDF</span>
+              </span>
+            )}
             <button
               type="button"
               onClick={(e) => {
@@ -70,7 +76,7 @@ export const MachineCard: React.FC<MachineCardProps> = ({
                 onOpenQr(machine);
               }}
               title="Ver QR Code da Máquina"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 border border-slate-700 transition"
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 border border-slate-700 transition cursor-pointer"
             >
               <QrCode className="w-3.5 h-3.5" />
             </button>
@@ -80,7 +86,7 @@ export const MachineCard: React.FC<MachineCardProps> = ({
           </div>
         </div>
 
-        <h3 
+        <h3
           onClick={() => onSelect(machine)}
           className="text-base font-bold text-white group-hover:text-amber-400 transition cursor-pointer line-clamp-1"
         >
@@ -137,8 +143,8 @@ export const MachineCard: React.FC<MachineCardProps> = ({
             {visibleLinked.slice(0, 3).map((link, idx) => {
               if (!link || !link.componentId) return null;
               const linkId = String(link.componentId).trim();
-              const comp = allComponents.find(c => 
-                (c.id && c.id === linkId) || 
+              const comp = allComponents.find(c =>
+                (c.id && c.id === linkId) ||
                 (c.tagCode && c.tagCode.toUpperCase() === linkId.toUpperCase()) ||
                 (c.id && c.id.toLowerCase() === linkId.toLowerCase())
               );

@@ -147,6 +147,9 @@ function sanitizeMachine(raw: any): MachineItem {
     status: raw.status || initMatch?.status || 'OPERACIONAL',
     linkedComponents: safeLinked,
     imageUrl: raw.imageUrl || initMatch?.imageUrl || '',
+    diagramPdfUrl: raw.diagramPdfUrl || initMatch?.diagramPdfUrl || '',
+    diagramPdfFileName: raw.diagramPdfFileName || initMatch?.diagramPdfFileName || '',
+    diagramDescription: raw.diagramDescription || initMatch?.diagramDescription || '',
     qrCodeData: raw.qrCodeData || `IFTA:${tagUpper || 'MAQ'}`,
     createdAt: raw.createdAt || initMatch?.createdAt || new Date().toISOString(),
     updatedAt: raw.updatedAt || new Date().toISOString()

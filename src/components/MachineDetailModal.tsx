@@ -1,22 +1,26 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Cog, 
-  Wrench, 
-  Zap, 
-  Shield, 
-  Ruler, 
-  MapPin, 
-  Layers, 
-  ExternalLink, 
-  Edit3, 
-  Trash2, 
-  QrCode, 
-  CheckCircle2, 
+import {
+  X,
+  Cog,
+  Wrench,
+  Zap,
+  Shield,
+  Ruler,
+  MapPin,
+  Layers,
+  ExternalLink,
+  Edit3,
+  Trash2,
+  QrCode,
+  CheckCircle2,
   AlertTriangle,
   Info,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  FileText,
+  Download,
+  Eye,
+  Upload
 } from 'lucide-react';
 import { MachineItem, ComponentItem, UserRole } from '../types';
 import { TechnicalItemImage } from './TechnicalItemImage';
@@ -41,6 +45,7 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
   onEditMachine,
   onDeleteMachine
 }) => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'diagram'>('overview');
   const [showQrModal, setShowQrModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -90,7 +95,7 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
       <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-6">
-        
+
         {/* Modal Header */}
         <div className="p-5 border-b border-slate-800 bg-slate-900/90 flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -175,10 +180,52 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
           </div>
         </div>
 
+        {/* Tab Navigation: Componentes & Diagrama Técnico em PDF */}
+        <div className="flex border-b border-slate-800 px-6 bg-slate-900 overflow-x-auto gap-4 text-xs font-medium shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('overview')}
+            className={`py-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+              activeTab === 'overview'
+                ? 'border-amber-400 text-amber-300 font-semibold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Componentes & Ficha Técnica</span>
+            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+              {visibleLinked.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('diagram')}
+            className={`py-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+              activeTab === 'diagram'
+                ? 'border-rose-400 text-rose-300 font-semibold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <FileText className="w-4 h-4 text-rose-400" />
+            <span>Diagrama Técnico (PDF)</span>
+            {machine.diagramPdfUrl ? (
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                PDF Anexado
+              </span>
+            ) : (
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-500">
+                Pendente
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Modal Body */}
         <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-          
-          {/* Profile Role Notice Banner */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              {/* Profile Role Notice Banner */}
           <div className={`p-4 rounded-xl border flex items-start gap-3 ${theme.badge}`}>
             <div className="shrink-0 mt-0.5">
               {theme.icon}
@@ -204,7 +251,7 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
 
           {/* Machine Technical Overview & Dimensions */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
+
             {/* Dimensions Card */}
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
               <div>
@@ -258,6 +305,66 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
             </div>
           </div>
 
+          {/* Banner de Acesso Rápido ao Diagrama em PDF */}
+          {machine.diagramPdfUrl ? (
+            <div className="p-4 rounded-xl bg-gradient-to-r from-rose-950/40 via-slate-900 to-slate-900 border border-rose-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 shrink-0">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-white font-mono truncate">
+                      {machine.diagramPdfFileName || `${machine.tagCode}_diagrama.pdf`}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0">
+                      PDF HOMOLOGADO
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 line-clamp-2">
+                    {machine.diagramDescription || 'Diagrama técnico esquemático com planta e interligações da máquina.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('diagram')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Ver Diagrama</span>
+                </button>
+                <a
+                  href={machine.diagramPdfUrl}
+                  download={machine.diagramPdfFileName || `${machine.tagCode}_diagrama.pdf`}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition shadow cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Baixar PDF</span>
+                </a>
+              </div>
+            </div>
+          ) : (
+            (userRole === 'CDI' || userRole === 'DESENVOLVEDOR') && onEditMachine && (
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-dashed border-slate-800 flex items-center justify-between gap-3 text-xs text-slate-400">
+                <div className="flex items-center gap-2.5">
+                  <FileText className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span>Nenhum diagrama em PDF cadastrado nesta máquina.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onEditMachine(machine)}
+                  className="text-amber-400 hover:text-amber-300 font-semibold inline-flex items-center gap-1 text-xs cursor-pointer hover:underline"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Anexar Diagrama em PDF</span>
+                </button>
+              </div>
+            )
+          )}
+
           {/* Description */}
           {machine.description && (
             <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-300 leading-relaxed">
@@ -285,8 +392,8 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
                 {visibleLinked.map((link, idx) => {
                   if (!link || !link.componentId) return null;
                   const linkId = String(link.componentId).trim();
-                  const comp = allComponents.find(c => 
-                    (c.id && c.id === linkId) || 
+                  const comp = allComponents.find(c =>
+                    (c.id && c.id === linkId) ||
                     (c.tagCode && c.tagCode.toUpperCase() === linkId.toUpperCase()) ||
                     (c.id && c.id.toLowerCase() === linkId.toLowerCase())
                   );
@@ -299,7 +406,7 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
                     >
                       <div className="flex items-start gap-3">
                         {/* Thumbnail illustrative image with guaranteed mobile fallback */}
-                        <div 
+                        <div
                           onClick={() => onSelectComponent(comp, 'specs')}
                           className="w-16 h-16 rounded-lg overflow-hidden border border-slate-800 shrink-0 bg-slate-900 cursor-pointer shadow-sm hover:border-amber-500/50 transition"
                         >
@@ -326,7 +433,7 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
                           </div>
 
                           {/* Component Name */}
-                          <h4 
+                          <h4
                             onClick={() => onSelectComponent(comp, 'specs')}
                             className="text-xs font-bold text-white group-hover:text-amber-400 transition cursor-pointer line-clamp-2 leading-snug"
                           >
@@ -352,11 +459,11 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
                           <div className="flex items-center gap-1.5 mt-2">
                             <span className="text-[10px] text-slate-500 font-mono">Acessível por:</span>
                             {link.allowedRoles.map(r => (
-                              <span 
+                              <span
                                 key={r}
                                 className={`text-[10px] font-mono px-1.5 py-0.2 rounded border ${
-                                  r === 'MECANICA' 
-                                    ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' 
+                                  r === 'MECANICA'
+                                    ? 'bg-sky-500/10 text-sky-400 border-sky-500/20'
                                     : r === 'ELETRICA'
                                     ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                                     : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
@@ -444,6 +551,87 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Excluir Máquina</span>
                 </button>
+              )}
+            </div>
+          )}
+            </div>
+          )}
+
+          {/* TAB 2: Diagrama Técnico em PDF da Máquina */}
+          {activeTab === 'diagram' && (
+            <div className="space-y-4">
+              {machine.diagramPdfUrl ? (
+                <div className="space-y-4">
+                  {/* Toolbar do Diagrama */}
+                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 shrink-0">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-sm font-bold text-white font-mono truncate">
+                            {machine.diagramPdfFileName || `${machine.tagCode}_diagrama.pdf`}
+                          </h4>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold shrink-0">
+                            PDF HOMOLOGADO
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 mt-0.5">
+                          {machine.diagramDescription || 'Diagrama e esquema elétrico/mecânico homologado para manutenção.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <a
+                        href={machine.diagramPdfUrl}
+                        download={machine.diagramPdfFileName || `${machine.tagCode}_diagrama.pdf`}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition shadow cursor-pointer active:scale-95"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Baixar Arquivo PDF</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Viewer embutido com altura generosa */}
+                  <div className="w-full h-[540px] rounded-xl overflow-hidden border border-slate-800 bg-slate-950 flex flex-col shadow-inner">
+                    <iframe
+                      src={machine.diagramPdfUrl}
+                      title={`Diagrama em PDF - ${machine.name}`}
+                      className="w-full flex-1 border-0 bg-slate-900"
+                    />
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 font-mono text-center">
+                    Documento oficial para consulta técnica nas intervenções mecânicas e elétricas na fábrica.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-12 rounded-2xl bg-slate-950/80 border border-dashed border-slate-800 text-center space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 mx-auto flex items-center justify-center">
+                    <FileText className="w-7 h-7" />
+                  </div>
+                  <div className="max-w-md mx-auto space-y-1">
+                    <h4 className="text-sm font-bold text-white">Nenhum Diagrama em PDF Anexado</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      {(userRole === 'CDI' || userRole === 'DESENVOLVEDOR')
+                        ? 'Como administrador do perfil CDI, você pode editar o cadastro desta máquina e anexar o diagrama técnico em PDF do seu computador ou celular.'
+                        : 'O perfil CDI ainda não anexou um diagrama técnico em PDF para esta máquina.'}
+                    </p>
+                  </div>
+                  {(userRole === 'CDI' || userRole === 'DESENVOLVEDOR') && onEditMachine && (
+                    <button
+                      type="button"
+                      onClick={() => onEditMachine(machine)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-lg transition shadow-md shadow-amber-500/20 cursor-pointer"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>Anexar Diagrama em PDF Agora</span>
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}

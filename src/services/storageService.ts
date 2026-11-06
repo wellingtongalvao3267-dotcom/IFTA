@@ -1168,6 +1168,9 @@ export const storageService = {
           status: m.status || initMatch?.status || 'OPERACIONAL',
           linkedComponents: safeLinked,
           imageUrl: m.imageUrl || initMatch?.imageUrl || '',
+          diagramPdfUrl: m.diagramPdfUrl || initMatch?.diagramPdfUrl || '',
+          diagramPdfFileName: m.diagramPdfFileName || initMatch?.diagramPdfFileName || '',
+          diagramDescription: m.diagramDescription || initMatch?.diagramDescription || '',
           qrCodeData: m.qrCodeData || `IFTA:${safeTag}`,
           createdAt: m.createdAt || initMatch?.createdAt || new Date().toISOString(),
           updatedAt: m.updatedAt || new Date().toISOString()

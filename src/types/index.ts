@@ -88,6 +88,9 @@ export interface MachineItem {
   qrCodeData: string;
   status?: 'OPERACIONAL' | 'MANUTENCAO' | 'ALERTA';
   linkedComponents: LinkedComponentRule[];
+  diagramPdfUrl?: string; // Data URI (base64) ou URL do diagrama esquemático/técnico em PDF da máquina
+  diagramPdfFileName?: string; // Nome do arquivo PDF (ex: "Diagrama_Eletrico_MAQ-EST-01.pdf")
+  diagramDescription?: string; // Descrição técnica do diagrama (ex: "Esquema Unifilar e Esquemático de Potência")
   createdBy?: string; // Username / Role do criador para rastreabilidade
   updatedBy?: string;
   createdAt: string;

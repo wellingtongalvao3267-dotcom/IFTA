@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Save, 
-  Cog, 
-  Layers, 
-  Wrench, 
-  Zap, 
-  Shield, 
-  Search, 
-  Check, 
+import {
+  X,
+  Save,
+  Cog,
+  Layers,
+  Wrench,
+  Zap,
+  Shield,
+  Search,
+  Check,
   Sparkles,
-  Ruler, 
-  MapPin, 
-  FileText, 
+  Ruler,
+  MapPin,
+  FileText,
   Image as ImageIcon,
   AlertCircle,
   Upload,
@@ -21,7 +21,9 @@ import {
   Loader2,
   QrCode,
   Info,
-  CheckCircle2
+  CheckCircle2,
+  Download,
+  Eye
 } from 'lucide-react';
 import { MachineItem, ComponentItem, LinkedComponentRule, UserRole } from '../types';
 import { TechnicalItemImage } from './TechnicalItemImage';
@@ -51,6 +53,9 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
     description: '',
     imageUrl: '',
     status: 'OPERACIONAL',
+    diagramPdfUrl: '',
+    diagramPdfFileName: '',
+    diagramDescription: '',
     linkedComponents: []
   });
 
@@ -60,6 +65,12 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const [compressionInfo, setCompressionInfo] = useState<CompressionResult | null>(null);
+
+  // Estados para Anexo e Processamento de Diagrama em PDF da Máquina
+  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
+  const [pdfSizeInfo, setPdfSizeInfo] = useState<string | null>(null);
+  const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
 
   const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,12 +93,59 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
     }
   };
 
+  const handlePdfFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+      setPdfUploadError('Por favor selecione um arquivo válido em formato PDF (.pdf).');
+      return;
+    }
+
+    // Limite de segurança de 15MB
+    const maxBytes = 15 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setPdfUploadError(`O arquivo PDF selecionado possui ${(file.size / (1024 * 1024)).toFixed(1)} MB. O limite máximo recomendado é de 15 MB.`);
+      return;
+    }
+
+    setIsProcessingPdf(true);
+    setPdfUploadError(null);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setFormData(prev => ({
+        ...prev,
+        diagramPdfUrl: result,
+        diagramPdfFileName: file.name,
+        diagramDescription: prev.diagramDescription || `Diagrama Técnico e Esquemático de ${file.name.replace(/\.[^/.]+$/, '')}`
+      }));
+      setPdfSizeInfo(formatBytes(file.size));
+      setIsProcessingPdf(false);
+    };
+    reader.onerror = () => {
+      setPdfUploadError('Não foi possível ler o arquivo PDF do dispositivo.');
+      setIsProcessingPdf(false);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   useEffect(() => {
     if (initialMachine) {
       setFormData({
         ...initialMachine,
-        linkedComponents: initialMachine.linkedComponents ? [...initialMachine.linkedComponents] : []
+        linkedComponents: initialMachine.linkedComponents ? [...initialMachine.linkedComponents] : [],
+        diagramPdfUrl: initialMachine.diagramPdfUrl || '',
+        diagramPdfFileName: initialMachine.diagramPdfFileName || '',
+        diagramDescription: initialMachine.diagramDescription || ''
       });
+      if (initialMachine.diagramPdfUrl) {
+        setPdfSizeInfo('Arquivo Homologado');
+      } else {
+        setPdfSizeInfo(null);
+      }
     } else {
       const defaultTag = storageService.generateUniqueMachineTag('MAQ-EST');
       setFormData({
@@ -98,10 +156,15 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
         description: 'Máquina / Equipamento industrial para linha de produção contínua.',
         imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80',
         status: 'OPERACIONAL',
+        diagramPdfUrl: '',
+        diagramPdfFileName: '',
+        diagramDescription: '',
         linkedComponents: []
       });
+      setPdfSizeInfo(null);
     }
     setErrorMsg(null);
+    setPdfUploadError(null);
   }, [initialMachine, isOpen]);
 
   if (!isOpen) return null;
@@ -227,6 +290,9 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
       dimensions: formData.dimensions?.trim() || 'Dimensões padrão conforme layout fabril',
       description: formData.description?.trim() || '',
       imageUrl: formData.imageUrl?.trim() || '',
+      diagramPdfUrl: formData.diagramPdfUrl || '',
+      diagramPdfFileName: formData.diagramPdfFileName?.trim() || (formData.diagramPdfUrl ? `${cleanTag}_diagrama.pdf` : ''),
+      diagramDescription: formData.diagramDescription?.trim() || '',
       qrCodeData: `IFTA:${cleanTag}`,
       status: formData.status || 'OPERACIONAL',
       linkedComponents: formData.linkedComponents || [],
@@ -259,7 +325,7 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
       <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-6">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/80">
           <div className="flex items-center gap-3">
@@ -291,7 +357,7 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-          
+
           {errorMsg && (
             <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center gap-2 text-xs text-rose-300">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
@@ -564,6 +630,155 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Seção de Anexo de Diagrama em PDF da Máquina */}
+              <div className="md:col-span-2 p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-200 uppercase tracking-wide flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-rose-400" />
+                      <span>Diagrama & Esquema Técnico em PDF da Máquina</span>
+                    </label>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Adicione o diagrama elétrico unifilar, esquemático pneumático/hidráulico ou layout CAD da máquina em formato PDF.
+                    </p>
+                  </div>
+
+                  {formData.diagramPdfUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          diagramPdfUrl: '',
+                          diagramPdfFileName: '',
+                          diagramDescription: ''
+                        }));
+                        setPdfSizeInfo(null);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-colors w-fit cursor-pointer"
+                      title="Remover diagrama PDF"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remover PDF</span>
+                    </button>
+                  )}
+                </div>
+
+                {pdfUploadError && (
+                  <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center gap-2 text-xs text-rose-300">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                    <span>{pdfUploadError}</span>
+                  </div>
+                )}
+
+                {/* Botão de Upload do Dispositivo */}
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-lg transition-colors shadow-sm active:scale-95">
+                    <Upload className="w-4 h-4" />
+                    <span>Anexar Diagrama em PDF do Dispositivo</span>
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={handlePdfFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {isProcessingPdf && (
+                    <span className="text-xs text-rose-400 flex items-center gap-1.5 font-medium animate-pulse">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Carregando e processando documento PDF...</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Card de Exibição do PDF Carregado */}
+                {formData.diagramPdfUrl && (
+                  <div className="p-3.5 rounded-xl bg-slate-950 border border-rose-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 shrink-0">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-xs font-bold text-white truncate font-mono">
+                            {formData.diagramPdfFileName || 'diagrama_tecnico.pdf'}
+                          </h4>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
+                            PDF
+                          </span>
+                          {pdfSizeInfo && (
+                            <span className="text-[10px] font-mono text-slate-400">
+                              ({pdfSizeInfo})
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-emerald-400 flex items-center gap-1 mt-0.5 font-medium">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Diagrama pronto para ser salvo e sincronizado no banco central</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setShowPdfPreviewModal(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Pré-visualizar</span>
+                      </button>
+
+                      <a
+                        href={formData.diagramPdfUrl}
+                        download={formData.diagramPdfFileName || `${formData.tagCode || 'MAQ'}_diagrama.pdf`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold border border-rose-500/30 transition cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Baixar</span>
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Campos Adicionais: Descrição do Diagrama & Link Alternativo */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Descrição / Finalidade do Diagrama:
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.diagramDescription || ''}
+                      onChange={(e) => setFormData({ ...formData, diagramDescription: e.target.value })}
+                      placeholder="Ex: Diagrama Elétrico Unifilar e Esquemático Pneumático 24Vcc"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-rose-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Ou informe o link/URL externa do PDF:
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.diagramPdfUrl?.startsWith('data:') ? '' : (formData.diagramPdfUrl || '')}
+                      onChange={(e) => {
+                        const val = e.target.value.trim();
+                        setFormData(prev => ({
+                          ...prev,
+                          diagramPdfUrl: val,
+                          diagramPdfFileName: val ? val.split('/').pop() || 'diagrama_remoto.pdf' : prev.diagramPdfFileName
+                        }));
+                      }}
+                      placeholder="https://servidor-fabrica/diagramas/MAQ-EST-01.pdf"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-rose-500 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -646,14 +861,14 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
                   const canElet = linkedRule?.allowedRoles.includes('ELETRICA');
 
                   return (
-                    <div 
+                    <div
                       key={comp.id}
                       className={`p-3 transition-colors ${
                         isLinked ? 'bg-amber-500/5' : 'hover:bg-slate-900/60'
                       }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        
+
                         {/* Checkbox to Link + Component Name/Tag */}
                         <div className="flex items-start gap-3 flex-1 min-w-0">
                           <input
@@ -684,7 +899,7 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
                         {/* Role Visibility Controls (Active if linked) */}
                         {isLinked && (
                           <div className="flex items-center gap-3 sm:border-l sm:border-slate-800 sm:pl-3 shrink-0">
-                            
+
                             {/* MECANICA CHECKBOX */}
                             <label className="flex items-center gap-1.5 text-xs text-sky-400 cursor-pointer select-none">
                               <input
@@ -755,6 +970,53 @@ export const MachineFormModal: React.FC<MachineFormModalProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Modal de Pré-visualização do Diagrama PDF */}
+      {showPdfPreviewModal && formData.diagramPdfUrl && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md">
+          <div className="relative w-full max-w-5xl h-[88vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-950">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white font-mono truncate max-w-md">
+                    {formData.diagramPdfFileName || 'Diagrama Técnico (PDF)'}
+                  </h4>
+                  <p className="text-[10px] text-slate-400">
+                    Pré-visualização do documento da máquina
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={formData.diagramPdfUrl}
+                  download={formData.diagramPdfFileName || `${formData.tagCode || 'MAQ'}_diagrama.pdf`}
+                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Baixar PDF</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowPdfPreviewModal(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 bg-slate-950 p-2 overflow-hidden flex flex-col">
+              <iframe
+                src={formData.diagramPdfUrl}
+                title="Pré-visualização do Diagrama PDF"
+                className="w-full h-full rounded-xl border border-slate-800 bg-slate-900 shadow-inner"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
