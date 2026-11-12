@@ -382,17 +382,28 @@ app.get('/api/data', (req, res) => {
 app.post('/api/data', (req, res) => {
   const { components, machines, categoryPermissions, users, logs, replaceAll } = req.body;
   const currentDb = loadDatabase();
-  const now = new Date().toISOString();
 
   if (Array.isArray(components)) {
     if (replaceAll) {
       currentDb.components = components.map(sanitizeComponent);
+      const restoredIds = new Set(
+        currentDb.components.flatMap(c => [c.id.toUpperCase(), c.tagCode.toUpperCase()])
+      );
+      currentDb.deletedComponentIds = (currentDb.deletedComponentIds || []).filter(
+        d => !restoredIds.has(String(d).trim().toUpperCase())
+      );
     } else {
-      // Non-destructive upsert union: never erase other existing components
+      const deletedCompSet = new Set(
+        (currentDb.deletedComponentIds || []).map(x => String(x).trim().toUpperCase())
+      );
+      // Non-destructive upsert union: never erase other existing components or resurrect deleted ones
       components.forEach((incoming: ComponentItem) => {
         if (!incoming || !incoming.tagCode) return;
         const itemToSave = sanitizeComponent(incoming);
-        const normTag = itemToSave.tagCode;
+        const normTag = itemToSave.tagCode.toUpperCase();
+        const normId = itemToSave.id.toUpperCase();
+        if (deletedCompSet.has(normId) || deletedCompSet.has(normTag)) return;
+
         const idx = currentDb.components.findIndex(c => c.id === itemToSave.id || c.tagCode.toUpperCase() === normTag);
         if (idx >= 0) {
           currentDb.components[idx] = { ...currentDb.components[idx], ...itemToSave };
@@ -406,12 +417,24 @@ app.post('/api/data', (req, res) => {
   if (Array.isArray(machines)) {
     if (replaceAll) {
       currentDb.machines = machines.map(sanitizeMachine);
+      const restoredIds = new Set(
+        currentDb.machines.flatMap(m => [m.id.toUpperCase(), m.tagCode.toUpperCase()])
+      );
+      currentDb.deletedMachineIds = (currentDb.deletedMachineIds || []).filter(
+        d => !restoredIds.has(String(d).trim().toUpperCase())
+      );
     } else {
+      const deletedMaqSet = new Set(
+        (currentDb.deletedMachineIds || []).map(x => String(x).trim().toUpperCase())
+      );
       // Non-destructive upsert union for machines
       machines.forEach((incoming: MachineItem) => {
         if (!incoming || !incoming.tagCode) return;
         const itemToSave = sanitizeMachine(incoming);
-        const normTag = itemToSave.tagCode;
+        const normTag = itemToSave.tagCode.toUpperCase();
+        const normId = itemToSave.id.toUpperCase();
+        if (deletedMaqSet.has(normId) || deletedMaqSet.has(normTag)) return;
+
         const idx = currentDb.machines.findIndex(m => m.id === itemToSave.id || m.tagCode.toUpperCase() === normTag);
         if (idx >= 0) {
           currentDb.machines[idx] = { ...currentDb.machines[idx], ...itemToSave };
@@ -433,6 +456,8 @@ app.post('/api/data', (req, res) => {
     data: {
       components: currentDb.components,
       machines: currentDb.machines,
+      deletedComponentIds: currentDb.deletedComponentIds || [],
+      deletedMachineIds: currentDb.deletedMachineIds || [],
       categoryPermissions: currentDb.categoryPermissions
     },
     message: 'Banco de dados técnico sincronizado e atualizado.',
@@ -550,25 +575,29 @@ app.post('/api/components', (req, res) => {
 // Component item delete (permanently removes including initial catalog items)
 app.delete('/api/components/:id', (req, res) => {
   const { id } = req.params;
+  const queryTag = typeof req.query.tagCode === 'string' ? req.query.tagCode.trim().toUpperCase() : '';
   const idUpper = id.trim().toUpperCase();
   const currentDb = loadDatabase();
   const initialLen = currentDb.components.length;
 
   const target = currentDb.components.find(
-    c => c.id === id || c.id.toUpperCase() === idUpper || c.tagCode.toUpperCase() === idUpper
+    c => c.id === id || c.id.toUpperCase() === idUpper || c.tagCode.toUpperCase() === idUpper || (queryTag && c.tagCode.toUpperCase() === queryTag)
+  ) || INITIAL_COMPONENTS.find(
+    ic => ic.id === id || ic.id.toUpperCase() === idUpper || ic.tagCode.toUpperCase() === idUpper || (queryTag && ic.tagCode.toUpperCase() === queryTag)
   );
   const targetIdUpper = target ? target.id.toUpperCase() : idUpper;
-  const targetTagUpper = target ? target.tagCode.toUpperCase() : idUpper;
+  const targetTagUpper = target ? target.tagCode.toUpperCase() : (queryTag || idUpper);
 
   // Registra tombstones definitivos no servidor para impedir ressurreição por initialData ou outros aparelhos
   const delSet = new Set((currentDb.deletedComponentIds || []).map(x => String(x).trim().toUpperCase()));
   delSet.add(idUpper);
   delSet.add(targetIdUpper);
   delSet.add(targetTagUpper);
+  if (queryTag) delSet.add(queryTag);
   currentDb.deletedComponentIds = Array.from(delSet);
 
   currentDb.components = currentDb.components.filter(
-    c => c.id !== id && c.id.toUpperCase() !== idUpper && c.tagCode.toUpperCase() !== idUpper && c.tagCode.toUpperCase() !== targetTagUpper
+    c => !delSet.has(c.id.toUpperCase()) && !delSet.has(c.tagCode.toUpperCase())
   );
 
   // Unlink from machines
@@ -576,19 +605,25 @@ app.delete('/api/components/:id', (req, res) => {
     if (m.linkedComponents) {
       m.linkedComponents = m.linkedComponents.filter(l => {
         const lid = String(l.componentId || '').trim().toUpperCase();
-        return lid !== idUpper && lid !== targetIdUpper && lid !== targetTagUpper;
+        return !delSet.has(lid);
       });
     }
   });
 
   saveDatabase(currentDb);
+  console.log(`[IFTA DATABASE] Peça excluída definitivamente: ${targetIdUpper} (${targetTagUpper})`);
+
   broadcastRealtime({
     type: 'COMPONENT_DELETED',
-    data: { id: target ? target.id : id, tagCode: target ? target.tagCode : id },
+    data: { id: target ? target.id : id, tagCode: target ? target.tagCode : (queryTag || id) },
     message: `Peça excluída definitivamente do catálogo.`,
     timestamp: new Date().toISOString()
   });
-  res.json({ success: true, removedCount: initialLen - currentDb.components.length });
+  res.json({
+    success: true,
+    removedCount: initialLen - currentDb.components.length,
+    deletedComponentIds: currentDb.deletedComponentIds
+  });
 });
 
 // Machine save / update
@@ -628,34 +663,44 @@ app.post('/api/machines', (req, res) => {
 // Machine delete (permanently removes from persistent database including initial machines)
 app.delete('/api/machines/:id', (req, res) => {
   const { id } = req.params;
+  const queryTag = typeof req.query.tagCode === 'string' ? req.query.tagCode.trim().toUpperCase() : '';
   const idUpper = id.trim().toUpperCase();
   const currentDb = loadDatabase();
   const initialLen = currentDb.machines.length;
 
   const target = currentDb.machines.find(
-    m => m.id === id || m.id.toUpperCase() === idUpper || m.tagCode.toUpperCase() === idUpper
+    m => m.id === id || m.id.toUpperCase() === idUpper || m.tagCode.toUpperCase() === idUpper || (queryTag && m.tagCode.toUpperCase() === queryTag)
+  ) || INITIAL_MACHINES.find(
+    im => im.id === id || im.id.toUpperCase() === idUpper || im.tagCode.toUpperCase() === idUpper || (queryTag && im.tagCode.toUpperCase() === queryTag)
   );
   const targetIdUpper = target ? target.id.toUpperCase() : idUpper;
-  const targetTagUpper = target ? target.tagCode.toUpperCase() : idUpper;
+  const targetTagUpper = target ? target.tagCode.toUpperCase() : (queryTag || idUpper);
 
   const delSet = new Set((currentDb.deletedMachineIds || []).map(x => String(x).trim().toUpperCase()));
   delSet.add(idUpper);
   delSet.add(targetIdUpper);
   delSet.add(targetTagUpper);
+  if (queryTag) delSet.add(queryTag);
   currentDb.deletedMachineIds = Array.from(delSet);
 
   currentDb.machines = currentDb.machines.filter(
-    m => m.id !== id && m.id.toUpperCase() !== idUpper && m.tagCode.toUpperCase() !== idUpper && m.tagCode.toUpperCase() !== targetTagUpper
+    m => !delSet.has(m.id.toUpperCase()) && !delSet.has(m.tagCode.toUpperCase())
   );
 
   saveDatabase(currentDb);
+  console.log(`[IFTA DATABASE] Máquina excluída definitivamente: ${targetIdUpper} (${targetTagUpper})`);
+
   broadcastRealtime({
     type: 'MACHINE_DELETED',
-    data: { id: target ? target.id : id, tagCode: target ? target.tagCode : id },
+    data: { id: target ? target.id : id, tagCode: target ? target.tagCode : (queryTag || id) },
     message: `Máquina excluída definitivamente do cadastro de ativos.`,
     timestamp: new Date().toISOString()
   });
-  res.json({ success: true, removedCount: initialLen - currentDb.machines.length });
+  res.json({
+    success: true,
+    removedCount: initialLen - currentDb.machines.length,
+    deletedMachineIds: currentDb.deletedMachineIds
+  });
 });
 
 // Reset database to initial factory defaults

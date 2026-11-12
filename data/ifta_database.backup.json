@@ -1,6 +1,95 @@
 {
   "components": [
     {
+      "id": "comp-005",
+      "tagCode": "ROL-MEC-219",
+      "name": "Rolamento Autocompensador de Rolos com Furo Cônico",
+      "category": "Mecânica",
+      "manufacturer": "SKF do Brasil",
+      "model": "22212 EK + Bucha H 312",
+      "application": "Eixo Mancal da Peneira Vibratória de Classificação - Unidade 01",
+      "description": "Rolamento autocompensador de duas carreiras de rolos esféricos simétricos, gaiola de aço prensado janela centrada e furo cônico (conicidade 1:12). Projetado especificamente para acomodar desalinhamentos dinâmicos severos e altas cargas radiais e de choque.",
+      "imageUrl": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
+      "technicalDiagramUrl": "",
+      "diagramDescription": "Esquema Mecânico de Montagem: Eixo liso Ø55mm com bucha de fixação H 312, arruela de trava MB 12 e porca de fixação KM 12. Folga radial interna residual deve ser aferida com cálibre de lâminas antes e após a montagem final.",
+      "specs": [
+        {
+          "label": "Diâmetro Interno (d)",
+          "value": "60 mm (furo cônico 1:12)"
+        },
+        {
+          "label": "Diâmetro do Eixo com Bucha",
+          "value": "55 mm"
+        },
+        {
+          "label": "Diâmetro Externo (D)",
+          "value": "110 mm"
+        },
+        {
+          "label": "Largura (B)",
+          "value": "28 mm"
+        },
+        {
+          "label": "Capacidade de Carga Dinâmica (C)",
+          "value": "159 kN"
+        },
+        {
+          "label": "Capacidade de Carga Estática (C0)",
+          "value": "166 kN"
+        },
+        {
+          "label": "Folga Radial Inicial",
+          "value": "0.040 a 0.055 mm (Classe Normal)"
+        },
+        {
+          "label": "Redução da Folga após Aperto",
+          "value": "0.025 a 0.030 mm"
+        }
+      ],
+      "maintenanceIntervalHours": 2500,
+      "maintenanceGuide": [
+        {
+          "step": 1,
+          "title": "Verificação da Temperatura do Mancal",
+          "instruction": "Medir com pirômetro infravermelho no ponto central da caixa de mancal SNL 512. Temperatura normal de trabalho: 60°C a 75°C.",
+          "torqueOrMeasure": "Alarme > 85°C"
+        },
+        {
+          "step": 2,
+          "title": "Lubrificação Periódica com Graxa de Extrema Pressão",
+          "instruction": "Injetar graxa complexo de lítio com aditivos EP e bissulfeto de molibdênio (SKF LGEP 2) através da ranhura e orifícios no anel externo (recurso W33).",
+          "torqueOrMeasure": "30g a cada 15 dias"
+        },
+        {
+          "step": 3,
+          "title": "Travamento da Porca KM e Orelha da Arruela MB",
+          "instruction": "Certificar que ao menos uma orelha da arruela de trava esteja dobrada no rebaixo correspondente da porca de fixação.",
+          "torqueOrMeasure": "Inspeção Visual"
+        }
+      ],
+      "commonFailures": [
+        {
+          "symptom": "Ruído de estalo e vibração metálica de baixa frequência",
+          "probableCause": "Fadiga na pista interna provocada por excesso de aperto da bucha (folga residual nula) gerando pré-carga destrutiva.",
+          "correctiveAction": "Desmontar mancal, inspecionar pistas quanto a descascamento e remontar respeitando o deslocamento axial da bucha."
+        },
+        {
+          "symptom": "Vazamento de graxa escurecida pela vedação do mancal",
+          "probableCause": "Degradação térmica da graxa ou sobre-lubrificação com quebra dos anéis de vedação labirinto tipo V-Ring.",
+          "correctiveAction": "Limpar a caixa do mancal, renovar as borrachas de vedação e dosar o volume de graxa em 30% a 50% do espaço livre."
+        }
+      ],
+      "manualFileName": "Manual_SKF_Montagem_Rolamentos_Autocompensadores.pdf",
+      "manualSummary": "Método do ângulo de aperto da porca, tabela de deslocamento axial e recomendações de lubrificação para vibração severa.",
+      "qrCodeData": "IFTA:ROL-MEC-219",
+      "visibleToRoles": [
+        "CDI",
+        "MECANICA"
+      ],
+      "createdAt": "2026-03-20T09:00:00Z",
+      "updatedAt": "2026-10-27T08:10:00Z"
+    },
+    {
       "id": "comp-010",
       "tagCode": "ROLO-MEC-088",
       "name": "Conjunto de Rolos de Carga e Retorno Emborrachados Ø89mm",
@@ -454,95 +543,6 @@
       ],
       "createdAt": "2026-03-18T14:00:00Z",
       "updatedAt": "2026-10-27T07:30:00Z"
-    },
-    {
-      "id": "comp-005",
-      "tagCode": "ROL-MEC-219",
-      "name": "Rolamento Autocompensador de Rolos com Furo Cônico",
-      "category": "Mecânica",
-      "manufacturer": "SKF do Brasil",
-      "model": "22212 EK + Bucha H 312",
-      "application": "Eixo Mancal da Peneira Vibratória de Classificação - Unidade 01",
-      "description": "Rolamento autocompensador de duas carreiras de rolos esféricos simétricos, gaiola de aço prensado janela centrada e furo cônico (conicidade 1:12). Projetado especificamente para acomodar desalinhamentos dinâmicos severos e altas cargas radiais e de choque.",
-      "imageUrl": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
-      "technicalDiagramUrl": "",
-      "diagramDescription": "Esquema Mecânico de Montagem: Eixo liso Ø55mm com bucha de fixação H 312, arruela de trava MB 12 e porca de fixação KM 12. Folga radial interna residual deve ser aferida com cálibre de lâminas antes e após a montagem final.",
-      "specs": [
-        {
-          "label": "Diâmetro Interno (d)",
-          "value": "60 mm (furo cônico 1:12)"
-        },
-        {
-          "label": "Diâmetro do Eixo com Bucha",
-          "value": "55 mm"
-        },
-        {
-          "label": "Diâmetro Externo (D)",
-          "value": "110 mm"
-        },
-        {
-          "label": "Largura (B)",
-          "value": "28 mm"
-        },
-        {
-          "label": "Capacidade de Carga Dinâmica (C)",
-          "value": "159 kN"
-        },
-        {
-          "label": "Capacidade de Carga Estática (C0)",
-          "value": "166 kN"
-        },
-        {
-          "label": "Folga Radial Inicial",
-          "value": "0.040 a 0.055 mm (Classe Normal)"
-        },
-        {
-          "label": "Redução da Folga após Aperto",
-          "value": "0.025 a 0.030 mm"
-        }
-      ],
-      "maintenanceIntervalHours": 2500,
-      "maintenanceGuide": [
-        {
-          "step": 1,
-          "title": "Verificação da Temperatura do Mancal",
-          "instruction": "Medir com pirômetro infravermelho no ponto central da caixa de mancal SNL 512. Temperatura normal de trabalho: 60°C a 75°C.",
-          "torqueOrMeasure": "Alarme > 85°C"
-        },
-        {
-          "step": 2,
-          "title": "Lubrificação Periódica com Graxa de Extrema Pressão",
-          "instruction": "Injetar graxa complexo de lítio com aditivos EP e bissulfeto de molibdênio (SKF LGEP 2) através da ranhura e orifícios no anel externo (recurso W33).",
-          "torqueOrMeasure": "30g a cada 15 dias"
-        },
-        {
-          "step": 3,
-          "title": "Travamento da Porca KM e Orelha da Arruela MB",
-          "instruction": "Certificar que ao menos uma orelha da arruela de trava esteja dobrada no rebaixo correspondente da porca de fixação.",
-          "torqueOrMeasure": "Inspeção Visual"
-        }
-      ],
-      "commonFailures": [
-        {
-          "symptom": "Ruído de estalo e vibração metálica de baixa frequência",
-          "probableCause": "Fadiga na pista interna provocada por excesso de aperto da bucha (folga residual nula) gerando pré-carga destrutiva.",
-          "correctiveAction": "Desmontar mancal, inspecionar pistas quanto a descascamento e remontar respeitando o deslocamento axial da bucha."
-        },
-        {
-          "symptom": "Vazamento de graxa escurecida pela vedação do mancal",
-          "probableCause": "Degradação térmica da graxa ou sobre-lubrificação com quebra dos anéis de vedação labirinto tipo V-Ring.",
-          "correctiveAction": "Limpar a caixa do mancal, renovar as borrachas de vedação e dosar o volume de graxa em 30% a 50% do espaço livre."
-        }
-      ],
-      "manualFileName": "Manual_SKF_Montagem_Rolamentos_Autocompensadores.pdf",
-      "manualSummary": "Método do ângulo de aperto da porca, tabela de deslocamento axial e recomendações de lubrificação para vibração severa.",
-      "qrCodeData": "IFTA:ROL-MEC-219",
-      "visibleToRoles": [
-        "CDI",
-        "MECANICA"
-      ],
-      "createdAt": "2026-03-20T09:00:00Z",
-      "updatedAt": "2026-10-27T08:10:00Z"
     },
     {
       "id": "comp-006",
@@ -1178,7 +1178,7 @@
     }
   ],
   "version": "2026.3",
-  "lastUpdated": "2026-11-12T23:05:10.264Z",
+  "lastUpdated": "2026-11-12T23:22:06.392Z",
   "deletedComponentIds": [],
   "deletedMachineIds": []
 }

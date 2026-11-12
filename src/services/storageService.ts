@@ -11,6 +11,9 @@ const STORAGE_KEYS = {
   HAS_SEEN_SPLASH: 'ifta_seen_splash_v2',
   PENDING_COMPONENTS: 'ifta_pending_comps_v3',
   PENDING_MACHINES: 'ifta_pending_maqs_v3',
+  // Fila de exclusões pendentes para sincronização garantida mesmo se houver falha momentânea de rede
+  PENDING_DELETED_COMPONENTS: 'ifta_pending_deleted_comps_v4',
+  PENDING_DELETED_MACHINES: 'ifta_pending_deleted_maqs_v4',
   // Cofres imutáveis locais (nunca destruídos por reinicialização do servidor ou container)
   VAULT_COMPONENTS: 'ifta_vault_components_v4',
   VAULT_MACHINES: 'ifta_vault_machines_v4',
@@ -56,12 +59,20 @@ export const storageService = {
       } catch {}
     }
 
+    const deletedCompSet = new Set(this.getDeletedComponentIds().map(x => String(x).trim().toUpperCase()));
     if (!localStorage.getItem(STORAGE_KEYS.COMPONENTS)) {
-      localStorage.setItem(STORAGE_KEYS.COMPONENTS, JSON.stringify(INITIAL_COMPONENTS));
+      const initialFiltered = INITIAL_COMPONENTS.filter(
+        ic => !deletedCompSet.has(ic.id.toUpperCase()) && !deletedCompSet.has(ic.tagCode.toUpperCase())
+      );
+      localStorage.setItem(STORAGE_KEYS.COMPONENTS, JSON.stringify(initialFiltered));
     } else {
       try {
-        const comps: ComponentItem[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPONENTS) || '[]');
+        let comps: ComponentItem[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPONENTS) || '[]');
         let changed = false;
+        const beforeFilterLen = comps.length;
+        comps = comps.filter(c => c && !deletedCompSet.has(String(c.id || '').trim().toUpperCase()) && !deletedCompSet.has(String(c.tagCode || '').trim().toUpperCase()));
+        if (comps.length !== beforeFilterLen) changed = true;
+
         comps.forEach(c => {
           if (c.visibleToRoles && (c.visibleToRoles as string[]).includes('MANUTENCAO')) {
             c.visibleToRoles = c.visibleToRoles.map(r => ((r as string) === 'MANUTENCAO' ? 'MECANICA' : r));
@@ -90,7 +101,6 @@ export const storageService = {
           }
         });
         // Garantir que componentes iniciais (não excluídos pelo usuário) estejam presentes
-        const deletedCompSet = new Set(this.getDeletedComponentIds().map(x => String(x).trim().toUpperCase()));
         INITIAL_COMPONENTS.forEach(initComp => {
           const idUpper = initComp.id.toUpperCase();
           const tagUpper = initComp.tagCode.toUpperCase();
@@ -107,13 +117,20 @@ export const storageService = {
     }
 
     // Inicialização de Máquinas e Equipamentos
+    const deletedMaqSet = new Set(this.getDeletedMachineIds().map(x => String(x).trim().toUpperCase()));
     if (!localStorage.getItem(STORAGE_KEYS.MACHINES)) {
-      localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(INITIAL_MACHINES));
+      const initialMaqsFiltered = INITIAL_MACHINES.filter(
+        im => !deletedMaqSet.has(im.id.toUpperCase()) && !deletedMaqSet.has(im.tagCode.toUpperCase())
+      );
+      localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(initialMaqsFiltered));
     } else {
       try {
-        const storedMachines: MachineItem[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.MACHINES) || '[]');
+        let storedMachines: MachineItem[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.MACHINES) || '[]');
         let changed = false;
-        const deletedMaqSet = new Set(this.getDeletedMachineIds().map(x => String(x).trim().toUpperCase()));
+        const beforeFilterLen = storedMachines.length;
+        storedMachines = storedMachines.filter(m => m && !deletedMaqSet.has(String(m.id || '').trim().toUpperCase()) && !deletedMaqSet.has(String(m.tagCode || '').trim().toUpperCase()));
+        if (storedMachines.length !== beforeFilterLen) changed = true;
+
         INITIAL_MACHINES.forEach(initMaq => {
           const idUpper = initMaq.id.toUpperCase();
           const tagUpper = initMaq.tagCode.toUpperCase();
@@ -358,12 +375,12 @@ export const storageService = {
       if (localStorage.getItem('ifta_salvaged_v1') === 'true') return;
       localStorage.setItem('ifta_salvaged_v1', 'true');
 
-      const initCompIds = new Set(INITIAL_COMPONENTS.map(c => c.id));
+      const initCompIds = new Set(INITIAL_COMPONENTS.map(c => c.id.toUpperCase()));
       const initCompTags = new Set(INITIAL_COMPONENTS.map(c => (c.tagCode || '').toUpperCase()));
-      const initMaqIds = new Set(INITIAL_MACHINES.map(m => m.id));
+      const initMaqIds = new Set(INITIAL_MACHINES.map(m => m.id.toUpperCase()));
       const initMaqTags = new Set(INITIAL_MACHINES.map(m => (m.tagCode || '').toUpperCase()));
-      const deletedComps = new Set(this.getDeletedComponentIds());
-      const deletedMaqs = new Set(this.getDeletedMachineIds());
+      const deletedComps = new Set(this.getDeletedComponentIds().map(x => String(x).trim().toUpperCase()));
+      const deletedMaqs = new Set(this.getDeletedMachineIds().map(x => String(x).trim().toUpperCase()));
 
       const activeKeys = new Set(Object.values(STORAGE_KEYS));
 
@@ -390,18 +407,18 @@ export const storageService = {
             candidateList.forEach(item => {
               if (!item || typeof item !== 'object' || !item.tagCode || typeof item.tagCode !== 'string') return;
               const tagUpper = item.tagCode.trim().toUpperCase();
-              const id = String(item.id || '');
+              const idUpper = String(item.id || '').trim().toUpperCase();
 
               // É um componente customizado válido?
               if (item.name && (item.category !== undefined || item.specs !== undefined)) {
-                if (!initCompIds.has(id) && !initCompTags.has(tagUpper) && !deletedComps.has(id) && !deletedComps.has(tagUpper)) {
+                if (!initCompIds.has(idUpper) && !initCompTags.has(tagUpper) && !deletedComps.has(idUpper) && !deletedComps.has(tagUpper)) {
                   this.saveToVaultComponent(item as ComponentItem);
                 }
               }
 
               // É uma máquina customizada válida?
               if (item.name && (item.linkedComponents !== undefined || item.criticalityLevel !== undefined || item.sector !== undefined)) {
-                if (!initMaqIds.has(id) && !initMaqTags.has(tagUpper) && !deletedMaqs.has(id) && !deletedMaqs.has(tagUpper)) {
+                if (!initMaqIds.has(idUpper) && !initMaqTags.has(tagUpper) && !deletedMaqs.has(idUpper) && !deletedMaqs.has(tagUpper)) {
                   this.saveToVaultMachine(item as MachineItem);
                 }
               }
@@ -416,15 +433,16 @@ export const storageService = {
 
   // --- Algoritmo de União Reconciliatória Puro (Sem efeitos colaterais de rede) ---
   mergeComponentsWithVault(serverComps: ComponentItem[]): ComponentItem[] {
-    const deletedIds = new Set(this.getDeletedComponentIds());
+    const deletedIds = new Set(this.getDeletedComponentIds().map(x => String(x).trim().toUpperCase()));
     const mergedMap = new Map<string, ComponentItem>();
 
     // 1. Preencher com dados válidos do servidor
     if (Array.isArray(serverComps)) {
       serverComps.forEach(c => {
         if (!c || !c.tagCode) return;
+        const idUpper = String(c.id || '').trim().toUpperCase();
         const tagUpper = c.tagCode.trim().toUpperCase();
-        if (!deletedIds.has(c.id) && !deletedIds.has(tagUpper)) {
+        if (!deletedIds.has(idUpper) && !deletedIds.has(tagUpper)) {
           mergedMap.set(tagUpper, { ...c, tagCode: tagUpper });
         }
       });
@@ -434,8 +452,9 @@ export const storageService = {
     const vaultComps = this.getVaultComponents();
     vaultComps.forEach(vc => {
       if (!vc || !vc.tagCode) return;
+      const idUpper = String(vc.id || '').trim().toUpperCase();
       const tagUpper = vc.tagCode.trim().toUpperCase();
-      if (deletedIds.has(vc.id) || deletedIds.has(tagUpper)) return;
+      if (deletedIds.has(idUpper) || deletedIds.has(tagUpper)) return;
 
       if (!mergedMap.has(tagUpper)) {
         mergedMap.set(tagUpper, { ...vc, tagCode: tagUpper });
@@ -449,10 +468,11 @@ export const storageService = {
       }
     });
 
-    // 3. Garantir itens de fábrica padrão
+    // 3. Garantir itens de fábrica padrão (respeitando tombstones)
     INITIAL_COMPONENTS.forEach(ic => {
+      const idUpper = ic.id.trim().toUpperCase();
       const tagUpper = ic.tagCode.trim().toUpperCase();
-      if (!deletedIds.has(ic.id) && !deletedIds.has(tagUpper) && !mergedMap.has(tagUpper)) {
+      if (!deletedIds.has(idUpper) && !deletedIds.has(tagUpper) && !mergedMap.has(tagUpper)) {
         mergedMap.set(tagUpper, ic);
       }
     });
@@ -461,15 +481,16 @@ export const storageService = {
   },
 
   mergeMachinesWithVault(serverMaqs: MachineItem[]): MachineItem[] {
-    const deletedIds = new Set(this.getDeletedMachineIds());
+    const deletedIds = new Set(this.getDeletedMachineIds().map(x => String(x).trim().toUpperCase()));
     const mergedMap = new Map<string, MachineItem>();
 
     // 1. Preencher com dados válidos do servidor
     if (Array.isArray(serverMaqs)) {
       serverMaqs.forEach(m => {
         if (!m || !m.tagCode) return;
+        const idUpper = String(m.id || '').trim().toUpperCase();
         const tagUpper = m.tagCode.trim().toUpperCase();
-        if (!deletedIds.has(m.id) && !deletedIds.has(tagUpper)) {
+        if (!deletedIds.has(idUpper) && !deletedIds.has(tagUpper)) {
           mergedMap.set(tagUpper, { ...m, tagCode: tagUpper });
         }
       });
@@ -479,8 +500,9 @@ export const storageService = {
     const vaultMaqs = this.getVaultMachines();
     vaultMaqs.forEach(vm => {
       if (!vm || !vm.tagCode) return;
+      const idUpper = String(vm.id || '').trim().toUpperCase();
       const tagUpper = vm.tagCode.trim().toUpperCase();
-      if (deletedIds.has(vm.id) || deletedIds.has(tagUpper)) return;
+      if (deletedIds.has(idUpper) || deletedIds.has(tagUpper)) return;
 
       if (!mergedMap.has(tagUpper)) {
         mergedMap.set(tagUpper, { ...vm, tagCode: tagUpper });
@@ -494,10 +516,11 @@ export const storageService = {
       }
     });
 
-    // 3. Garantir máquinas de fábrica
+    // 3. Garantir máquinas de fábrica (respeitando tombstones)
     INITIAL_MACHINES.forEach(im => {
+      const idUpper = im.id.trim().toUpperCase();
       const tagUpper = im.tagCode.trim().toUpperCase();
-      if (!deletedIds.has(im.id) && !deletedIds.has(tagUpper) && !mergedMap.has(tagUpper)) {
+      if (!deletedIds.has(idUpper) && !deletedIds.has(tagUpper) && !mergedMap.has(tagUpper)) {
         mergedMap.set(tagUpper, im);
       }
     });
@@ -761,9 +784,96 @@ export const storageService = {
     localStorage.setItem(STORAGE_KEYS.PENDING_MACHINES, JSON.stringify(list));
   },
 
+  getPendingDeletedComponents(): Array<{ id: string; tagCode: string }> {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.PENDING_DELETED_COMPONENTS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  addPendingDeletedComponent(id: string, tagCode: string) {
+    const idUpper = String(id || '').trim().toUpperCase();
+    const tagUpper = String(tagCode || id || '').trim().toUpperCase();
+    if (!idUpper && !tagUpper) return;
+    const list = this.getPendingDeletedComponents();
+    if (!list.some(x => x.id.toUpperCase() === idUpper || x.tagCode.toUpperCase() === tagUpper)) {
+      list.push({ id: id || idUpper, tagCode: tagUpper });
+      localStorage.setItem(STORAGE_KEYS.PENDING_DELETED_COMPONENTS, JSON.stringify(list));
+    }
+  },
+
+  removePendingDeletedComponent(idOrTag: string) {
+    if (!idOrTag) return;
+    const clean = idOrTag.trim().toUpperCase();
+    const list = this.getPendingDeletedComponents().filter(
+      x => x.id.toUpperCase() !== clean && x.tagCode.toUpperCase() !== clean
+    );
+    localStorage.setItem(STORAGE_KEYS.PENDING_DELETED_COMPONENTS, JSON.stringify(list));
+  },
+
+  getPendingDeletedMachines(): Array<{ id: string; tagCode: string }> {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.PENDING_DELETED_MACHINES);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  addPendingDeletedMachine(id: string, tagCode: string) {
+    const idUpper = String(id || '').trim().toUpperCase();
+    const tagUpper = String(tagCode || id || '').trim().toUpperCase();
+    if (!idUpper && !tagUpper) return;
+    const list = this.getPendingDeletedMachines();
+    if (!list.some(x => x.id.toUpperCase() === idUpper || x.tagCode.toUpperCase() === tagUpper)) {
+      list.push({ id: id || idUpper, tagCode: tagUpper });
+      localStorage.setItem(STORAGE_KEYS.PENDING_DELETED_MACHINES, JSON.stringify(list));
+    }
+  },
+
+  removePendingDeletedMachine(idOrTag: string) {
+    if (!idOrTag) return;
+    const clean = idOrTag.trim().toUpperCase();
+    const list = this.getPendingDeletedMachines().filter(
+      x => x.id.toUpperCase() !== clean && x.tagCode.toUpperCase() !== clean
+    );
+    localStorage.setItem(STORAGE_KEYS.PENDING_DELETED_MACHINES, JSON.stringify(list));
+  },
+
   async syncWithServer(): Promise<{ success: boolean; source: 'server' | 'offline' }> {
     try {
-      // 1. Enviar primeiro quaisquer peças pendentes de sincronização
+      // 0. Enviar primeiro exclusões pendentes para que não sejam revertidas pelo servidor
+      const pendingDelComps = this.getPendingDeletedComponents();
+      for (const del of pendingDelComps) {
+        try {
+          const delRes = await fetch(
+            `/api/components/${encodeURIComponent(del.id)}?tagCode=${encodeURIComponent(del.tagCode)}`,
+            { method: 'DELETE', credentials: 'include' }
+          );
+          if (delRes.ok) {
+            this.removePendingDeletedComponent(del.id);
+            this.removePendingDeletedComponent(del.tagCode);
+          }
+        } catch {}
+      }
+
+      const pendingDelMaqs = this.getPendingDeletedMachines();
+      for (const del of pendingDelMaqs) {
+        try {
+          const delRes = await fetch(
+            `/api/machines/${encodeURIComponent(del.id)}?tagCode=${encodeURIComponent(del.tagCode)}`,
+            { method: 'DELETE', credentials: 'include' }
+          );
+          if (delRes.ok) {
+            this.removePendingDeletedMachine(del.id);
+            this.removePendingDeletedMachine(del.tagCode);
+          }
+        } catch {}
+      }
+
+      // 1. Enviar peças pendentes de sincronização
       const pendingComps = this.getPendingSyncComponents();
       for (const comp of pendingComps) {
         try {
@@ -935,25 +1045,36 @@ export const storageService = {
   getComponents(): ComponentItem[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.COMPONENTS);
-      let items: ComponentItem[] = data ? JSON.parse(data) : INITIAL_COMPONENTS;
+      let items: ComponentItem[] = data ? JSON.parse(data) : [...INITIAL_COMPONENTS];
+
+      const deletedIds = new Set(this.getDeletedComponentIds().map(x => String(x).trim().toUpperCase()));
+      let dirty = false;
+
+      // Filtrar imediatamente quaisquer itens já marcados como excluídos
+      const beforeLen = items.length;
+      items = items.filter(i => {
+        if (!i) return false;
+        const idUpper = String(i.id || '').trim().toUpperCase();
+        const tagUpper = String(i.tagCode || '').trim().toUpperCase();
+        return !deletedIds.has(idUpper) && !deletedIds.has(tagUpper);
+      });
+      if (items.length !== beforeLen) dirty = true;
 
       // Salvaguarda: garantir que quaisquer peças customizadas salvas no cofre permanente nunca desapareçam
       const vault = this.getVaultComponents();
-      const deletedIds = new Set(this.getDeletedComponentIds());
-      let enriched = false;
-
       vault.forEach(vc => {
         if (!vc || !vc.tagCode) return;
+        const idUpper = String(vc.id || '').trim().toUpperCase();
         const tagUpper = vc.tagCode.trim().toUpperCase();
-        if (!deletedIds.has(vc.id) && !deletedIds.has(tagUpper)) {
+        if (!deletedIds.has(idUpper) && !deletedIds.has(tagUpper)) {
           if (!items.some(i => i.id === vc.id || (i.tagCode && i.tagCode.trim().toUpperCase() === tagUpper))) {
             items.unshift(vc);
-            enriched = true;
+            dirty = true;
           }
         }
       });
 
-      if (enriched) {
+      if (dirty) {
         localStorage.setItem(STORAGE_KEYS.COMPONENTS, JSON.stringify(items));
       }
 
@@ -1057,6 +1178,8 @@ export const storageService = {
     this.saveToVaultComponent(resultItem);
     this.removeDeletedComponentId(resultItem.id);
     this.removeDeletedComponentId(cleanTag);
+    this.removePendingDeletedComponent(resultItem.id);
+    this.removePendingDeletedComponent(cleanTag);
 
     // 2. Salva em LocalStorage e adiciona à fila de sincronização pendente
     localStorage.setItem(STORAGE_KEYS.COMPONENTS, JSON.stringify(items));
@@ -1099,53 +1222,94 @@ export const storageService = {
   },
 
   async deleteComponent(id: string): Promise<boolean> {
+    const idUpper = String(id || '').trim().toUpperCase();
     const items = this.getComponents();
-    const itemToDelete = items.find(i => i.id === id || i.tagCode === id);
+    const itemToDelete =
+      items.find(i => String(i.id || '').trim().toUpperCase() === idUpper || String(i.tagCode || '').trim().toUpperCase() === idUpper) ||
+      INITIAL_COMPONENTS.find(ic => ic.id.toUpperCase() === idUpper || ic.tagCode.toUpperCase() === idUpper);
+    const resolvedId = itemToDelete ? itemToDelete.id : id;
     const tagToDelete = itemToDelete ? itemToDelete.tagCode : id;
+    const resolvedIdUpper = String(resolvedId || '').trim().toUpperCase();
+    const tagUpper = String(tagToDelete || '').trim().toUpperCase();
 
-    // Registra tombstone para não ressuscitar por sincronização
+    // Registra tombstone e fila pendente para impedir ressurreição por sincronização
+    this.addDeletedComponentId(resolvedId);
     this.addDeletedComponentId(id);
     this.addDeletedComponentId(tagToDelete);
+    this.addPendingDeletedComponent(resolvedId, tagToDelete);
+
+    this.removeFromVaultComponent(resolvedId);
     this.removeFromVaultComponent(id);
     this.removeFromVaultComponent(tagToDelete);
+    this.removePendingSyncComponent(resolvedId);
     this.removePendingSyncComponent(id);
     this.removePendingSyncComponent(tagToDelete);
 
-    const filtered = items.filter(i => i.id !== id && i.tagCode !== id && i.tagCode.toUpperCase() !== tagToDelete.toUpperCase());
-    if (filtered.length !== items.length) {
-      localStorage.setItem(STORAGE_KEYS.COMPONENTS, JSON.stringify(filtered));
+    const filtered = items.filter(i => {
+      const cid = String(i.id || '').trim().toUpperCase();
+      const ctag = String(i.tagCode || '').trim().toUpperCase();
+      return cid !== idUpper && cid !== resolvedIdUpper && ctag !== idUpper && ctag !== tagUpper;
+    });
+    localStorage.setItem(STORAGE_KEYS.COMPONENTS, JSON.stringify(filtered));
 
-      // Atualiza componentes vinculados nas máquinas
-      const machines = this.getMachines();
-      let machinesChanged = false;
-      const updatedMachines = machines.map(m => {
-        if (m.linkedComponents && m.linkedComponents.some(l => l.componentId === id)) {
-          machinesChanged = true;
-          return {
-            ...m,
-            linkedComponents: m.linkedComponents.filter(l => l.componentId !== id)
-          };
-        }
-        return m;
-      });
-      if (machinesChanged) {
-        localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(updatedMachines));
+    // Atualiza componentes vinculados nas máquinas (localStorage e cofre local)
+    const machines = this.getMachines();
+    let machinesChanged = false;
+    const isDeletedLink = (componentId: string) => {
+      const lid = String(componentId || '').trim().toUpperCase();
+      return lid === idUpper || lid === resolvedIdUpper || lid === tagUpper;
+    };
+    const updatedMachines = machines.map(m => {
+      if (m.linkedComponents && m.linkedComponents.some(l => isDeletedLink(l.componentId))) {
+        machinesChanged = true;
+        return {
+          ...m,
+          linkedComponents: m.linkedComponents.filter(l => !isDeletedLink(l.componentId))
+        };
       }
+      return m;
+    });
+    if (machinesChanged) {
+      localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(updatedMachines));
+      const vaultMachines = this.getVaultMachines().map(vm => ({
+        ...vm,
+        linkedComponents: (vm.linkedComponents || []).filter(l => !isDeletedLink(l.componentId))
+      }));
+      localStorage.setItem(STORAGE_KEYS.VAULT_MACHINES, JSON.stringify(vaultMachines));
+    }
 
-      window.dispatchEvent(new CustomEvent('ifta_data_synced'));
+    // Atualizar snapshot de backup local para não manter referência obsoleta
+    try {
+      const snapRaw = localStorage.getItem(STORAGE_KEYS.SNAPSHOT_BACKUP);
+      if (snapRaw) {
+        const snap = JSON.parse(snapRaw);
+        snap.components = filtered;
+        if (machinesChanged) snap.machines = updatedMachines;
+        localStorage.setItem(STORAGE_KEYS.SNAPSHOT_BACKUP, JSON.stringify(snap));
+      }
+    } catch {}
 
-      // Exclusão definitiva no backend / Docker
-      try {
-        await fetch(`/api/components/${encodeURIComponent(id)}`, {
+    window.dispatchEvent(new CustomEvent('ifta_data_synced'));
+
+    // Exclusão definitiva no backend / Docker (sempre executa mesmo se já removido localmente)
+    try {
+      const res = await fetch(
+        `/api/components/${encodeURIComponent(resolvedId)}?tagCode=${encodeURIComponent(tagToDelete)}`,
+        {
           method: 'DELETE',
           credentials: 'include'
-        });
-      } catch (err) {
-        console.warn('[STORAGE] Erro ao excluir peça no servidor:', err);
+        }
+      );
+      if (res.ok) {
+        this.removePendingDeletedComponent(resolvedId);
+        this.removePendingDeletedComponent(id);
+        this.removePendingDeletedComponent(tagToDelete);
+        return true;
       }
-
-      return true;
+    } catch (err) {
+      console.warn('[STORAGE] Erro ao excluir peça no servidor (exclusão mantida na fila de sincronização):', err);
     }
+
     return false;
   },
 
@@ -1197,25 +1361,36 @@ export const storageService = {
   getMachines(): MachineItem[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.MACHINES);
-      let list: MachineItem[] = data ? JSON.parse(data) : INITIAL_MACHINES;
+      let list: MachineItem[] = data ? JSON.parse(data) : [...INITIAL_MACHINES];
+
+      const deletedIds = new Set(this.getDeletedMachineIds().map(x => String(x).trim().toUpperCase()));
+      let dirty = false;
+
+      // Filtrar imediatamente máquinas já excluídas
+      const beforeLen = list.length;
+      list = list.filter(m => {
+        if (!m) return false;
+        const idUpper = String(m.id || '').trim().toUpperCase();
+        const tagUpper = String(m.tagCode || '').trim().toUpperCase();
+        return !deletedIds.has(idUpper) && !deletedIds.has(tagUpper);
+      });
+      if (list.length !== beforeLen) dirty = true;
 
       // Salvaguarda: garantir que quaisquer máquinas salvas no cofre permanente nunca desapareçam
       const vault = this.getVaultMachines();
-      const deletedIds = new Set(this.getDeletedMachineIds());
-      let enriched = false;
-
       vault.forEach(vm => {
         if (!vm || !vm.tagCode) return;
+        const idUpper = String(vm.id || '').trim().toUpperCase();
         const tagUpper = vm.tagCode.trim().toUpperCase();
-        if (!deletedIds.has(vm.id) && !deletedIds.has(tagUpper)) {
+        if (!deletedIds.has(idUpper) && !deletedIds.has(tagUpper)) {
           if (!list.some(m => m.id === vm.id || (m.tagCode && m.tagCode.trim().toUpperCase() === tagUpper))) {
             list.unshift(vm);
-            enriched = true;
+            dirty = true;
           }
         }
       });
 
-      if (enriched) {
+      if (dirty) {
         localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(list));
       }
 
@@ -1318,6 +1493,8 @@ export const storageService = {
     this.saveToVaultMachine(resultMachine);
     this.removeDeletedMachineId(resultMachine.id);
     this.removeDeletedMachineId(cleanTag);
+    this.removePendingDeletedMachine(resultMachine.id);
+    this.removePendingDeletedMachine(cleanTag);
 
     // 2. Salva localmente e adiciona à fila de sincronização pendente
     localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(machines));
@@ -1360,35 +1537,66 @@ export const storageService = {
   },
 
   async deleteMachine(id: string): Promise<boolean> {
+    const idUpper = String(id || '').trim().toUpperCase();
     const machines = this.getMachines();
-    const itemToDelete = machines.find(m => m.id === id || m.tagCode === id);
+    const itemToDelete =
+      machines.find(m => String(m.id || '').trim().toUpperCase() === idUpper || String(m.tagCode || '').trim().toUpperCase() === idUpper) ||
+      INITIAL_MACHINES.find(im => im.id.toUpperCase() === idUpper || im.tagCode.toUpperCase() === idUpper);
+    const resolvedId = itemToDelete ? itemToDelete.id : id;
     const tagToDelete = itemToDelete ? itemToDelete.tagCode : id;
+    const resolvedIdUpper = String(resolvedId || '').trim().toUpperCase();
+    const tagUpper = String(tagToDelete || '').trim().toUpperCase();
 
-    // Registra tombstone para não ressuscitar por sincronização
+    // Registra tombstone e fila pendente para não ressuscitar por sincronização
+    this.addDeletedMachineId(resolvedId);
     this.addDeletedMachineId(id);
     this.addDeletedMachineId(tagToDelete);
+    this.addPendingDeletedMachine(resolvedId, tagToDelete);
+
+    this.removeFromVaultMachine(resolvedId);
     this.removeFromVaultMachine(id);
     this.removeFromVaultMachine(tagToDelete);
+    this.removePendingSyncMachine(resolvedId);
     this.removePendingSyncMachine(id);
     this.removePendingSyncMachine(tagToDelete);
 
-    const filtered = machines.filter(m => m.id !== id && m.tagCode !== id && m.tagCode.toUpperCase() !== tagToDelete.toUpperCase());
-    if (filtered.length !== machines.length) {
-      localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(filtered));
-      window.dispatchEvent(new CustomEvent('ifta_data_synced'));
+    const filtered = machines.filter(m => {
+      const mid = String(m.id || '').trim().toUpperCase();
+      const mtag = String(m.tagCode || '').trim().toUpperCase();
+      return mid !== idUpper && mid !== resolvedIdUpper && mtag !== idUpper && mtag !== tagUpper;
+    });
+    localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(filtered));
 
-      // Exclusão definitiva no backend / Docker
-      try {
-        await fetch(`/api/machines/${encodeURIComponent(id)}`, {
+    try {
+      const snapRaw = localStorage.getItem(STORAGE_KEYS.SNAPSHOT_BACKUP);
+      if (snapRaw) {
+        const snap = JSON.parse(snapRaw);
+        snap.machines = filtered;
+        localStorage.setItem(STORAGE_KEYS.SNAPSHOT_BACKUP, JSON.stringify(snap));
+      }
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('ifta_data_synced'));
+
+    // Exclusão definitiva no backend / Docker
+    try {
+      const res = await fetch(
+        `/api/machines/${encodeURIComponent(resolvedId)}?tagCode=${encodeURIComponent(tagToDelete)}`,
+        {
           method: 'DELETE',
           credentials: 'include'
-        });
-      } catch (err) {
-        console.warn('[STORAGE] Erro ao excluir máquina no servidor:', err);
+        }
+      );
+      if (res.ok) {
+        this.removePendingDeletedMachine(resolvedId);
+        this.removePendingDeletedMachine(id);
+        this.removePendingDeletedMachine(tagToDelete);
+        return true;
       }
-
-      return true;
+    } catch (err) {
+      console.warn('[STORAGE] Erro ao excluir máquina no servidor (exclusão mantida na fila de sincronização):', err);
     }
+
     return false;
   },
 
@@ -1458,8 +1666,11 @@ export const storageService = {
     localStorage.setItem(STORAGE_KEYS.DELETED_MACHINES, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.PENDING_COMPONENTS, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.PENDING_MACHINES, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.PENDING_DELETED_COMPONENTS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.PENDING_DELETED_MACHINES, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.VAULT_COMPONENTS, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.VAULT_MACHINES, JSON.stringify([]));
+    localStorage.removeItem(STORAGE_KEYS.SNAPSHOT_BACKUP);
     fetch('/api/reset', {
       method: 'POST',
       credentials: 'include'

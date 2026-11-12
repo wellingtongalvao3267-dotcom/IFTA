@@ -56,7 +56,7 @@ export default defineConfig(() => {
           navigateFallbackDenylist: [/^\/api/],
           runtimeCaching: [
             {
-              urlPattern: /^\/api\/.*/i,
+              urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
               handler: 'NetworkOnly'
             },
             {
@@ -90,7 +90,7 @@ export default defineConfig(() => {
           ]
         },
         devOptions: {
-          enabled: true,
+          enabled: false,
           type: 'module'
         }
       })

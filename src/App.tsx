@@ -112,12 +112,12 @@ export default function App() {
         setSelectedComponent(prev => {
           if (!prev) return null;
           const fresh = storageService.getComponents().find(c => c.id === prev.id || c.tagCode === prev.tagCode);
-          return fresh || prev;
+          return fresh || null;
         });
         setSelectedMachine(prev => {
           if (!prev) return null;
           const fresh = storageService.getMachines().find(m => m.id === prev.id || m.tagCode === prev.tagCode);
-          return fresh || prev;
+          return fresh || null;
         });
       }
     };
@@ -314,14 +314,18 @@ export default function App() {
   };
 
   const handleDeleteComponent = async (id: string) => {
-    const comp = components.find(c => c.id === id);
+    const comp = components.find(c => c.id === id) || storageService.getComponents().find(c => c.id === id);
     if (selectedComponent?.id === id) {
       setSelectedComponent(null);
     }
     showSaveToast(`Removendo peça do banco de dados...`);
-    await storageService.deleteComponent(id);
+    const synced = await storageService.deleteComponent(id);
     refreshComponents();
-    showSaveToast(`✅ Peça removida do banco de dados em todos os dispositivos.`);
+    if (synced) {
+      showSaveToast(`✅ Peça removida definitivamente do catálogo e do banco central.`);
+    } else {
+      showSaveToast(`💾 Peça removida localmente; será sincronizada com o servidor assim que conectar.`);
+    }
     if (currentUser && comp) {
       storageService.addLog(
         currentUser.username,
@@ -358,14 +362,18 @@ export default function App() {
   };
 
   const handleDeleteMachine = async (id: string) => {
-    const maq = machines.find(m => m.id === id);
+    const maq = machines.find(m => m.id === id) || storageService.getMachines().find(m => m.id === id);
     if (selectedMachine?.id === id) {
       setSelectedMachine(null);
     }
     showSaveToast(`Removendo máquina do banco de dados...`);
-    await storageService.deleteMachine(id);
+    const synced = await storageService.deleteMachine(id);
     refreshComponents();
-    showSaveToast(`✅ Máquina removida do banco de dados em todos os dispositivos.`);
+    if (synced) {
+      showSaveToast(`✅ Máquina removida definitivamente do catálogo e do banco central.`);
+    } else {
+      showSaveToast(`💾 Máquina removida localmente; será sincronizada com o servidor assim que conectar.`);
+    }
     if (currentUser && maq) {
       storageService.addLog(
         currentUser.username,
