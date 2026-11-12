@@ -76,9 +76,9 @@ export const storageService = {
             c.imageUrl = c.imageUrl.replace('/src/assets/images/', '/assets/images/');
             changed = true;
           }
-          // Atualizar imagens vazias com as imagens oficiais do INITIAL_COMPONENTS
+          // Atualizar imagens apenas quando indefinidas (preserva remoções intencionais)
           const matchInit = INITIAL_COMPONENTS.find(ic => ic.id === c.id || ic.tagCode === c.tagCode);
-          if (matchInit && (!c.imageUrl || c.imageUrl === '')) {
+          if (matchInit && (c.imageUrl === undefined || c.imageUrl === null)) {
             c.imageUrl = matchInit.imageUrl;
             changed = true;
           }
@@ -89,9 +89,13 @@ export const storageService = {
             changed = true;
           }
         });
-        // Garantir que os novos componentes da esteira (comp-008, comp-009, comp-010) estejam presentes
+        // Garantir que componentes iniciais (não excluídos pelo usuário) estejam presentes
+        const deletedCompSet = new Set(this.getDeletedComponentIds().map(x => String(x).trim().toUpperCase()));
         INITIAL_COMPONENTS.forEach(initComp => {
-          if (!comps.some(c => c.id === initComp.id || c.tagCode === initComp.tagCode)) {
+          const idUpper = initComp.id.toUpperCase();
+          const tagUpper = initComp.tagCode.toUpperCase();
+          if (deletedCompSet.has(idUpper) || deletedCompSet.has(tagUpper)) return;
+          if (!comps.some(c => c.id === initComp.id || c.tagCode.toUpperCase() === tagUpper)) {
             comps.push(initComp);
             changed = true;
           }
@@ -109,8 +113,12 @@ export const storageService = {
       try {
         const storedMachines: MachineItem[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.MACHINES) || '[]');
         let changed = false;
+        const deletedMaqSet = new Set(this.getDeletedMachineIds().map(x => String(x).trim().toUpperCase()));
         INITIAL_MACHINES.forEach(initMaq => {
-          if (!storedMachines.some(m => m.id === initMaq.id || m.tagCode === initMaq.tagCode)) {
+          const idUpper = initMaq.id.toUpperCase();
+          const tagUpper = initMaq.tagCode.toUpperCase();
+          if (deletedMaqSet.has(idUpper) || deletedMaqSet.has(tagUpper)) return;
+          if (!storedMachines.some(m => m.id === initMaq.id || m.tagCode.toUpperCase() === tagUpper)) {
             storedMachines.push(initMaq);
             changed = true;
           }
@@ -299,6 +307,48 @@ export const storageService = {
     const upper = idOrTag.trim().toUpperCase();
     const deleted = this.getDeletedMachineIds().filter(d => d !== upper && d !== idOrTag);
     localStorage.setItem(STORAGE_KEYS.DELETED_MACHINES, JSON.stringify(deleted));
+  },
+
+  applyServerTombstones(deletedCompIds?: string[], deletedMaqIds?: string[]) {
+    if (Array.isArray(deletedCompIds) && deletedCompIds.length > 0) {
+      const delSet = new Set(deletedCompIds.map(x => String(x).trim().toUpperCase()));
+      deletedCompIds.forEach(id => {
+        this.addDeletedComponentId(id);
+        this.removeFromVaultComponent(id);
+        this.removePendingSyncComponent(id);
+      });
+      try {
+        const localComps = JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPONENTS) || '[]');
+        if (Array.isArray(localComps)) {
+          const filtered = localComps.filter((c: any) =>
+            c && !delSet.has(String(c.id || '').trim().toUpperCase()) && !delSet.has(String(c.tagCode || '').trim().toUpperCase())
+          );
+          if (filtered.length !== localComps.length) {
+            localStorage.setItem(STORAGE_KEYS.COMPONENTS, JSON.stringify(filtered));
+          }
+        }
+      } catch {}
+    }
+
+    if (Array.isArray(deletedMaqIds) && deletedMaqIds.length > 0) {
+      const delSet = new Set(deletedMaqIds.map(x => String(x).trim().toUpperCase()));
+      deletedMaqIds.forEach(id => {
+        this.addDeletedMachineId(id);
+        this.removeFromVaultMachine(id);
+        this.removePendingSyncMachine(id);
+      });
+      try {
+        const localMaqs = JSON.parse(localStorage.getItem(STORAGE_KEYS.MACHINES) || '[]');
+        if (Array.isArray(localMaqs)) {
+          const filtered = localMaqs.filter((m: any) =>
+            m && !delSet.has(String(m.id || '').trim().toUpperCase()) && !delSet.has(String(m.tagCode || '').trim().toUpperCase())
+          );
+          if (filtered.length !== localMaqs.length) {
+            localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(filtered));
+          }
+        }
+      } catch {}
+    }
   },
 
   // --- Scanner de Resgate Automático de Itens Perdidos (Executado apenas 1 vez para migração limpa) ---
@@ -494,6 +544,7 @@ export const storageService = {
 
             // Snapshot recebido ao conectar imediatamente (não-destrutivo: união com o cofre)
             if (event.type === 'CONNECTED' && event.data) {
+              this.applyServerTombstones(event.data.deletedComponentIds, event.data.deletedMachineIds);
               const mergedComps = this.mergeComponentsWithVault(Array.isArray(event.data.components) ? event.data.components : []);
               const mergedMaqs = this.mergeMachinesWithVault(Array.isArray(event.data.machines) ? event.data.machines : []);
               
@@ -526,12 +577,19 @@ export const storageService = {
               }));
               window.dispatchEvent(new CustomEvent('ifta_data_synced'));
             } else if (event.type === 'COMPONENT_DELETED' && event.data) {
-              const { id } = event.data;
+              const { id, tagCode } = event.data;
               this.addDeletedComponentId(id);
+              if (tagCode) this.addDeletedComponentId(tagCode);
               this.removeFromVaultComponent(id);
+              if (tagCode) this.removeFromVaultComponent(tagCode);
               this.removePendingSyncComponent(id);
+              if (tagCode) this.removePendingSyncComponent(tagCode);
 
-              const items = this.getComponents().filter(c => c.id !== id && c.tagCode !== id);
+              const idUpper = String(id || '').trim().toUpperCase();
+              const tagUpper = String(tagCode || id || '').trim().toUpperCase();
+              const items = this.getComponents().filter(c =>
+                c.id !== id && c.id.toUpperCase() !== idUpper && c.tagCode.toUpperCase() !== idUpper && c.tagCode.toUpperCase() !== tagUpper
+              );
               localStorage.setItem(STORAGE_KEYS.COMPONENTS, JSON.stringify(items));
               window.dispatchEvent(new CustomEvent('ifta_realtime_notification', {
                 detail: {
@@ -566,12 +624,19 @@ export const storageService = {
               }));
               window.dispatchEvent(new CustomEvent('ifta_data_synced'));
             } else if (event.type === 'MACHINE_DELETED' && event.data) {
-              const { id } = event.data;
+              const { id, tagCode } = event.data;
               this.addDeletedMachineId(id);
+              if (tagCode) this.addDeletedMachineId(tagCode);
               this.removeFromVaultMachine(id);
+              if (tagCode) this.removeFromVaultMachine(tagCode);
               this.removePendingSyncMachine(id);
+              if (tagCode) this.removePendingSyncMachine(tagCode);
 
-              const machines = this.getMachines().filter(m => m.id !== id && m.tagCode !== id);
+              const idUpper = String(id || '').trim().toUpperCase();
+              const tagUpper = String(tagCode || id || '').trim().toUpperCase();
+              const machines = this.getMachines().filter(m =>
+                m.id !== id && m.id.toUpperCase() !== idUpper && m.tagCode.toUpperCase() !== idUpper && m.tagCode.toUpperCase() !== tagUpper
+              );
               localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(machines));
               window.dispatchEvent(new CustomEvent('ifta_realtime_notification', {
                 detail: {
@@ -583,6 +648,7 @@ export const storageService = {
               }));
               window.dispatchEvent(new CustomEvent('ifta_data_synced'));
             } else if (event.type === 'DATABASE_UPDATED' && event.data) {
+              this.applyServerTombstones(event.data.deletedComponentIds, event.data.deletedMachineIds);
               if (Array.isArray(event.data.components)) {
                 const mergedComps = this.mergeComponentsWithVault(event.data.components);
                 localStorage.setItem(STORAGE_KEYS.COMPONENTS, JSON.stringify(mergedComps));
@@ -749,7 +815,10 @@ export const storageService = {
       if (serverDb && Array.isArray(serverDb.components) && Array.isArray(serverDb.machines)) {
         let changed = false;
 
-        // 4. Reconciliação não-destrutiva com o cofre permanente
+        // 4. Aplicar exclusões (tombstones) definitivas do servidor antes de reconciliar
+        this.applyServerTombstones(serverDb.deletedComponentIds, serverDb.deletedMachineIds);
+
+        // 5. Reconciliação não-destrutiva com o cofre permanente
         const mergedComponents = this.mergeComponentsWithVault(serverDb.components);
         const mergedMachines = this.mergeMachinesWithVault(serverDb.machines);
 
@@ -777,12 +846,18 @@ export const storageService = {
           }
         }
 
-        // 5. Auto-reidratação do servidor se o servidor tiver sido reiniciado sem itens do cofre
+        // 6. Auto-reidratação do servidor se o servidor tiver sido reiniciado sem itens do cofre (ignorando itens excluídos)
+        const deletedCompSet = new Set(this.getDeletedComponentIds().map(x => String(x).trim().toUpperCase()));
         const serverCompTags = new Set(serverDb.components.map((c: any) => (c.tagCode || '').toUpperCase()));
-        const missingComps = this.getVaultComponents().filter(vc => vc.tagCode && !serverCompTags.has(vc.tagCode.toUpperCase()));
+        const missingComps = this.getVaultComponents().filter(
+          vc => vc.tagCode && !serverCompTags.has(vc.tagCode.toUpperCase()) && !deletedCompSet.has(vc.id.toUpperCase()) && !deletedCompSet.has(vc.tagCode.toUpperCase())
+        );
 
+        const deletedMaqSet = new Set(this.getDeletedMachineIds().map(x => String(x).trim().toUpperCase()));
         const serverMaqTags = new Set(serverDb.machines.map((m: any) => (m.tagCode || '').toUpperCase()));
-        const missingMaqs = this.getVaultMachines().filter(vm => vm.tagCode && !serverMaqTags.has(vm.tagCode.toUpperCase()));
+        const missingMaqs = this.getVaultMachines().filter(
+          vm => vm.tagCode && !serverMaqTags.has(vm.tagCode.toUpperCase()) && !deletedMaqSet.has(vm.id.toUpperCase()) && !deletedMaqSet.has(vm.tagCode.toUpperCase())
+        );
 
         if (missingComps.length > 0 || missingMaqs.length > 0) {
           this.rehydrateServerBatch(missingComps, missingMaqs).catch(() => {});
@@ -896,19 +971,19 @@ export const storageService = {
           tagCode: safeTag,
           name: c.name || initMatch?.name || 'Componente Técnico',
           category: safeCategory,
-          manufacturer: c.manufacturer || initMatch?.manufacturer || 'Fabricante Homologado',
-          model: c.model || initMatch?.model || 'Modelo Padrão',
-          application: c.application || initMatch?.application || 'Equipamento Geral de Planta',
-          description: c.description || initMatch?.description || 'Descrição técnica operacional.',
-          imageUrl: c.imageUrl || initMatch?.imageUrl || '',
-          technicalDiagramUrl: c.technicalDiagramUrl || initMatch?.technicalDiagramUrl || '',
-          diagramDescription: c.diagramDescription || initMatch?.diagramDescription || '',
-          specs: Array.isArray(c.specs) && c.specs.length > 0 ? c.specs : (initMatch?.specs || []),
-          maintenanceIntervalHours: c.maintenanceIntervalHours || initMatch?.maintenanceIntervalHours || 4000,
-          maintenanceGuide: Array.isArray(c.maintenanceGuide) && c.maintenanceGuide.length > 0 ? c.maintenanceGuide : (initMatch?.maintenanceGuide || []),
-          commonFailures: Array.isArray(c.commonFailures) && c.commonFailures.length > 0 ? c.commonFailures : (initMatch?.commonFailures || []),
-          manualFileName: c.manualFileName || initMatch?.manualFileName || 'manual_tecnico.pdf',
-          manualSummary: c.manualSummary || initMatch?.manualSummary || 'Manual operacional.',
+          manufacturer: c.manufacturer !== undefined && c.manufacturer !== null ? c.manufacturer : (initMatch?.manufacturer || 'Fabricante Homologado'),
+          model: c.model !== undefined && c.model !== null ? c.model : (initMatch?.model || 'Modelo Padrão'),
+          application: c.application !== undefined && c.application !== null ? c.application : (initMatch?.application || 'Equipamento Geral de Planta'),
+          description: c.description !== undefined && c.description !== null ? c.description : (initMatch?.description || 'Descrição técnica operacional.'),
+          imageUrl: c.imageUrl !== undefined && c.imageUrl !== null ? c.imageUrl : (initMatch?.imageUrl || ''),
+          technicalDiagramUrl: c.technicalDiagramUrl !== undefined && c.technicalDiagramUrl !== null ? c.technicalDiagramUrl : (initMatch?.technicalDiagramUrl || ''),
+          diagramDescription: c.diagramDescription !== undefined && c.diagramDescription !== null ? c.diagramDescription : (initMatch?.diagramDescription || ''),
+          specs: Array.isArray(c.specs) ? c.specs : (initMatch?.specs || []),
+          maintenanceIntervalHours: c.maintenanceIntervalHours !== undefined && c.maintenanceIntervalHours !== null ? Number(c.maintenanceIntervalHours) : (initMatch?.maintenanceIntervalHours || 4000),
+          maintenanceGuide: Array.isArray(c.maintenanceGuide) ? c.maintenanceGuide : (initMatch?.maintenanceGuide || []),
+          commonFailures: Array.isArray(c.commonFailures) ? c.commonFailures : (initMatch?.commonFailures || []),
+          manualFileName: c.manualFileName !== undefined && c.manualFileName !== null ? c.manualFileName : (initMatch?.manualFileName || 'manual_tecnico.pdf'),
+          manualSummary: c.manualSummary !== undefined && c.manualSummary !== null ? c.manualSummary : (initMatch?.manualSummary || 'Manual operacional.'),
           qrCodeData: c.qrCodeData || `IFTA:${safeTag}`,
           visibleToRoles: Array.isArray(c.visibleToRoles) && c.visibleToRoles.length > 0 ? c.visibleToRoles : (initMatch?.visibleToRoles || defaultRoles),
           createdAt: c.createdAt || initMatch?.createdAt || new Date().toISOString(),
@@ -1379,6 +1454,16 @@ export const storageService = {
     localStorage.setItem(STORAGE_KEYS.MACHINES, JSON.stringify(INITIAL_MACHINES));
     localStorage.setItem(STORAGE_KEYS.CATEGORY_PERMISSIONS, JSON.stringify(INITIAL_CATEGORY_PERMISSIONS));
     localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(INITIAL_LOGS));
+    localStorage.setItem(STORAGE_KEYS.DELETED_COMPONENTS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.DELETED_MACHINES, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.PENDING_COMPONENTS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.PENDING_MACHINES, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.VAULT_COMPONENTS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.VAULT_MACHINES, JSON.stringify([]));
+    fetch('/api/reset', {
+      method: 'POST',
+      credentials: 'include'
+    }).catch(() => {});
   },
 
   getCurrentUser(): UserAccount | null {

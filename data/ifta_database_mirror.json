@@ -1,6 +1,95 @@
 {
   "components": [
     {
+      "id": "comp-010",
+      "tagCode": "ROLO-MEC-088",
+      "name": "Conjunto de Rolos de Carga e Retorno Emborrachados Ø89mm",
+      "category": "Mecânica",
+      "manufacturer": "Martin Sprocket / Linha Transmecânica",
+      "model": "RL-89-650-R-NBR (Revestimento Borracha 8mm)",
+      "application": "Esteira Transportadora 01 - Suporte Inferior e Intermediário da Esteira",
+      "description": "Conjunto de rolos cilíndricos em tubo de aço carbono Schedule 40 usinado com revestimento vulcanizado de borracha nitrílica (NBR) com dureza 65 Shore A para absorção de impactos e redução de ruído. Eixo de aço trefilado retificado com rolamentos rígidos de esferas 6204-2RS blindados e vedação por labirinto de nylon.",
+      "imageUrl": "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=800&q=80",
+      "technicalDiagramUrl": "",
+      "diagramDescription": "Esquema de Montagem nos Cavaletes: Encaixe do eixo fresado com rebaixo de 14mm para fixação por chavetas nas ranhuras das travessas da esteira. Balanceamento dinâmico classe ISO G6.3 para até 450 RPM.",
+      "specs": [
+        {
+          "label": "Diâmetro Externo Total",
+          "value": "Ø 89 mm (incluindo emborrachamento)"
+        },
+        {
+          "label": "Comprimento da Face do Rolo",
+          "value": "650 mm"
+        },
+        {
+          "label": "Espessura do Revestimento de Borracha",
+          "value": "8.0 mm Vulcanizada a Quente"
+        },
+        {
+          "label": "Dureza da Borracha",
+          "value": "65 Shore A"
+        },
+        {
+          "label": "Rolamento Interno",
+          "value": "2x 6204-2RS (Lubrificação permanente)"
+        },
+        {
+          "label": "Diâmetro do Eixo",
+          "value": "Ø 20 mm com pontas fresadas de 14 mm"
+        },
+        {
+          "label": "Capacidade de Carga por Rolo",
+          "value": "180 kg"
+        },
+        {
+          "label": "Excentricidade Máxima (Batimento)",
+          "value": "< 0.35 mm"
+        }
+      ],
+      "maintenanceIntervalHours": 3000,
+      "maintenanceGuide": [
+        {
+          "step": 1,
+          "title": "Verificação da Rotação Livre sem Travamento",
+          "instruction": "Girar manualmente cada rolo de apoio com a esteira parada para constatar ausência de atrito ou aspereza nos rolamentos.",
+          "torqueOrMeasure": "Giro suave e silencioso"
+        },
+        {
+          "step": 2,
+          "title": "Medição do Desgaste da Borracha",
+          "instruction": "Aferir a espessura da camada de borracha na região central onde ocorre maior contato de carga.",
+          "torqueOrMeasure": "Espessura mínima: 3.0 mm"
+        },
+        {
+          "step": 3,
+          "title": "Alinhamento dos Cavaletes de Suporte",
+          "instruction": "Verificar perpendicularidade dos rolos em relação à linha de centro da esteira para evitar desvio lateral de esteira.",
+          "torqueOrMeasure": "Alinhamento a 90° com esquadro"
+        }
+      ],
+      "commonFailures": [
+        {
+          "symptom": "Rolo travado com desgaste em faceta plana na borracha",
+          "probableCause": "Entrada de água ou produto corrosivo lavando a graxa do rolamento ou travamento por sujeira sob o eixo.",
+          "correctiveAction": "Substituir o rolo travado imediatamente para não queimar a fita e conferir os anéis de vedação."
+        },
+        {
+          "symptom": "Descolamento do revestimento emborrachado",
+          "probableCause": "Contaminação contínua por solventes químicos ou impacto excessivo de produtos em queda livre.",
+          "correctiveAction": "Trocar o rolo por modelo com revestimento em poliuretano de alta resistência mecânica."
+        }
+      ],
+      "manualFileName": "Catalogo_Rolos_Transportadores_Industriais.pdf",
+      "manualSummary": "Tabela de seleção de rolos de carga, rolos guias e rolos de retorno com guias de diâmetro e peso admissível.",
+      "qrCodeData": "IFTA:ROLO-MEC-088",
+      "visibleToRoles": [
+        "CDI",
+        "MECANICA"
+      ],
+      "createdAt": "2026-03-26T11:00:00Z",
+      "updatedAt": "2026-10-27T08:10:00Z"
+    },
+    {
       "id": "comp-002",
       "tagCode": "INV-ELET-018",
       "name": "Inversor de Frequência Vetorial 7.5kW (400V)",
@@ -806,95 +895,6 @@
       ],
       "createdAt": "2026-03-26T10:00:00Z",
       "updatedAt": "2026-10-27T08:05:00Z"
-    },
-    {
-      "id": "comp-010",
-      "tagCode": "ROLO-MEC-088",
-      "name": "Conjunto de Rolos de Carga e Retorno Emborrachados Ø89mm",
-      "category": "Mecânica",
-      "manufacturer": "Martin Sprocket / Linha Transmecânica",
-      "model": "RL-89-650-R-NBR (Revestimento Borracha 8mm)",
-      "application": "Esteira Transportadora 01 - Suporte Inferior e Intermediário da Esteira",
-      "description": "Conjunto de rolos cilíndricos em tubo de aço carbono Schedule 40 usinado com revestimento vulcanizado de borracha nitrílica (NBR) com dureza 65 Shore A para absorção de impactos e redução de ruído. Eixo de aço trefilado retificado com rolamentos rígidos de esferas 6204-2RS blindados e vedação por labirinto de nylon.",
-      "imageUrl": "https://images.unsplash.com/photo-1581092162384-8987c1d64718?auto=format&fit=crop&w=800&q=80",
-      "technicalDiagramUrl": "",
-      "diagramDescription": "Esquema de Montagem nos Cavaletes: Encaixe do eixo fresado com rebaixo de 14mm para fixação por chavetas nas ranhuras das travessas da esteira. Balanceamento dinâmico classe ISO G6.3 para até 450 RPM.",
-      "specs": [
-        {
-          "label": "Diâmetro Externo Total",
-          "value": "Ø 89 mm (incluindo emborrachamento)"
-        },
-        {
-          "label": "Comprimento da Face do Rolo",
-          "value": "650 mm"
-        },
-        {
-          "label": "Espessura do Revestimento de Borracha",
-          "value": "8.0 mm Vulcanizada a Quente"
-        },
-        {
-          "label": "Dureza da Borracha",
-          "value": "65 Shore A"
-        },
-        {
-          "label": "Rolamento Interno",
-          "value": "2x 6204-2RS (Lubrificação permanente)"
-        },
-        {
-          "label": "Diâmetro do Eixo",
-          "value": "Ø 20 mm com pontas fresadas de 14 mm"
-        },
-        {
-          "label": "Capacidade de Carga por Rolo",
-          "value": "180 kg"
-        },
-        {
-          "label": "Excentricidade Máxima (Batimento)",
-          "value": "< 0.35 mm"
-        }
-      ],
-      "maintenanceIntervalHours": 3000,
-      "maintenanceGuide": [
-        {
-          "step": 1,
-          "title": "Verificação da Rotação Livre sem Travamento",
-          "instruction": "Girar manualmente cada rolo de apoio com a esteira parada para constatar ausência de atrito ou aspereza nos rolamentos.",
-          "torqueOrMeasure": "Giro suave e silencioso"
-        },
-        {
-          "step": 2,
-          "title": "Medição do Desgaste da Borracha",
-          "instruction": "Aferir a espessura da camada de borracha na região central onde ocorre maior contato de carga.",
-          "torqueOrMeasure": "Espessura mínima: 3.0 mm"
-        },
-        {
-          "step": 3,
-          "title": "Alinhamento dos Cavaletes de Suporte",
-          "instruction": "Verificar perpendicularidade dos rolos em relação à linha de centro da esteira para evitar desvio lateral de esteira.",
-          "torqueOrMeasure": "Alinhamento a 90° com esquadro"
-        }
-      ],
-      "commonFailures": [
-        {
-          "symptom": "Rolo travado com desgaste em faceta plana na borracha",
-          "probableCause": "Entrada de água ou produto corrosivo lavando a graxa do rolamento ou travamento por sujeira sob o eixo.",
-          "correctiveAction": "Substituir o rolo travado imediatamente para não queimar a fita e conferir os anéis de vedação."
-        },
-        {
-          "symptom": "Descolamento do revestimento emborrachado",
-          "probableCause": "Contaminação contínua por solventes químicos ou impacto excessivo de produtos em queda livre.",
-          "correctiveAction": "Trocar o rolo por modelo com revestimento em poliuretano de alta resistência mecânica."
-        }
-      ],
-      "manualFileName": "Catalogo_Rolos_Transportadores_Industriais.pdf",
-      "manualSummary": "Tabela de seleção de rolos de carga, rolos guias e rolos de retorno com guias de diâmetro e peso admissível.",
-      "qrCodeData": "IFTA:ROLO-MEC-088",
-      "visibleToRoles": [
-        "CDI",
-        "MECANICA"
-      ],
-      "createdAt": "2026-03-26T11:00:00Z",
-      "updatedAt": "2026-10-27T08:10:00Z"
     }
   ],
   "machines": [
@@ -976,14 +976,6 @@
         {
           "componentId": "comp-009",
           "positionOrFunction": "Modelo de Fita de Transporte Modular Flat Top 2\" (Largura 650 mm)",
-          "allowedRoles": [
-            "CDI",
-            "MECANICA"
-          ]
-        },
-        {
-          "componentId": "comp-010",
-          "positionOrFunction": "Conjunto de Rolos de Carga e Retorno Emborrachados Ø89 mm",
           "allowedRoles": [
             "CDI",
             "MECANICA"
@@ -1186,5 +1178,7 @@
     }
   ],
   "version": "2026.3",
-  "lastUpdated": "2026-11-06T01:53:13.751Z"
+  "lastUpdated": "2026-11-12T23:05:10.264Z",
+  "deletedComponentIds": [],
+  "deletedMachineIds": []
 }
